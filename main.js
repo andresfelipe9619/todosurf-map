@@ -25,7 +25,7 @@ $(document).ready(() => {
 });
 
 async function loadSurfingFeatures() {
-
+    var markers = L.markerClusterGroup();
     var result = await fetch(API);
     var data = await result.json();
     var features = new L.GeoJSON(data.features, {
@@ -38,12 +38,13 @@ async function loadSurfingFeatures() {
         }
     });
     mFeatures = features;
-    mFeatures.addTo(mMap)
+    markers.addLayer(mFeatures);
+    mMap.addLayer(markers);
     loadSearchControl()
-    loadGroupedOverlays()
+    loadGroupedLayers()
 }
 
-function loadGroupedOverlays() {
+function loadGroupedLayers() {
 
     var groupedOverlays = {
         "Capas propias": {
@@ -61,13 +62,13 @@ function loadGroupedOverlays() {
 function loadSearchControl() {
     searchControl = new L.Control.Search({
         layer: mFeatures,
-        propertyName: 'name',
+        propertyName: 'Texto',
         marker: false,
-        moveToLocation: function (latlng, title, map) {
-            //map.fitBounds( latlng.layer.getBounds() );
-            var zoom = map.getBoundsZoom(latlng.layer.getBounds());
-            map.setView(latlng, zoom); // access the zoom
-        }
+        // moveToLocation: function (latlng, title, map) {
+        //     //map.fitBounds( latlng.layer.getBounds() );
+        //     var zoom = map.getBoundsZoom(latlng.layer.getBounds());
+        //     map.setView(latlng, zoom); // access the zoom
+        // }
     });
     searchControl.on('search:locationfound', onSearchLocationFound)
         .on('search:collapsed', onSearchCollapsed);
@@ -87,8 +88,7 @@ function getRandomColor() {
 
 function onSearchLocationFound(e) {
     console.log('search:locationfound', e);
-
-    e.layer.setStyle({ fillColor: '#3f0', color: '#0f0' });
+    // e.layer.setStyle({ fillColor: '#3f0', color: '#0f0' });
     if (e.layer._popup)
         e.layer.openPopup();
 }
