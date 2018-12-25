@@ -1,15 +1,17 @@
 var API = 'https://opendata.arcgis.com/datasets/09d5f64cc7bc4cb38bc0b84550650527_0.geojson';
 var TILE_LAYER = 'https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}'
 var TOKEN = 'pk.eyJ1IjoiYW5kcmVzOTYxOSIsImEiOiJjanExdTFodjMwYXQyNDNuMmVvazV6eHBlIn0.kOpHKEx5EBGD8YIXmKRQWA';
-var MAP_OPTIONS = {
-    center: [38.645, -9.019],
-    zoom: 5,
-}
 var mMap = null;
 var mFeatures = [];
 var baseLayer = null;
 var searchControl = null;
-
+var bounds = new L.LatLngBounds(new L.LatLng(33.1414, -13.6017), new L.LatLng(42.9142, 8.5772));
+var MAP_OPTIONS = {
+    center: [38.645, -9.019],
+    zoom: 5,
+    maxBounds: bounds,
+    maxBoundsViscosity: 1
+}
 $(document).ready(() => {
     mMap = L.map('mapid', MAP_OPTIONS)
     baseLayer = L.tileLayer(TILE_LAYER, {
