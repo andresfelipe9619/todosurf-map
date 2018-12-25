@@ -10,11 +10,11 @@ var baseLayer = L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.pn
 baseLayer.addTo(mMap);
 
 var featuresLayer = new L.GeoJSON(data, {
-    style: function(feature) {
-        return {color: feature.properties.color };
+    style: function (feature) {
+        return { color: feature.properties.color };
     },
-    onEachFeature: function(feature, marker) {
-        marker.bindPopup('<h4 style="color:'+feature.properties.color+'">'+ feature.properties.name +'</h4>');
+    onEachFeature: function (feature, marker) {
+        marker.bindPopup('<h4 style="color:' + feature.properties.color + '">' + feature.properties.name + '</h4>');
     }
 });
 
@@ -24,31 +24,31 @@ var searchControl = new L.Control.Search({
     layer: featuresLayer,
     propertyName: 'name',
     marker: false,
-    moveToLocation: function(latlng, title, map) {
+    moveToLocation: function (latlng, title, map) {
         //map.fitBounds( latlng.layer.getBounds() );
         var zoom = map.getBoundsZoom(latlng.layer.getBounds());
-          map.setView(latlng, zoom); // access the zoom
+        map.setView(latlng, zoom); // access the zoom
     }
 });
 
-searchControl.on('search:locationfound', function(e) {
-    
+searchControl.on('search:locationfound', function (e) {
+
     //console.log('search:locationfound', );
 
     //map.removeLayer(this._markerSearch)
 
-    e.layer.setStyle({fillColor: '#3f0', color: '#0f0'});
-    if(e.layer._popup)
+    e.layer.setStyle({ fillColor: '#3f0', color: '#0f0' });
+    if (e.layer._popup)
         e.layer.openPopup();
 
-}).on('search:collapsed', function(e) {
+}).on('search:collapsed', function (e) {
 
-    featuresLayer.eachLayer(function(layer) {	//restore feature color
+    featuresLayer.eachLayer(function (layer) {	//restore feature color
         featuresLayer.resetStyle(layer);
-    });	
+    });
 });
 
-mMap.addControl( searchControl );  //inizialize search control
+mMap.addControl(searchControl);  //inizialize search control
 
 var popup = L.popup();
 var groupedOverlays = {
