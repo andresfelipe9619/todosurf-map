@@ -1,23 +1,26 @@
-const API =
-  "https://opendata.arcgis.com/datasets/09d5f64cc7bc4cb38bc0b84550650527_0.geojson";
 const TILE_LAYER =
-  "https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}";
+"https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}";
 const TOKEN =
-  "pk.eyJ1IjoiYW5kcmVzOTYxOSIsImEiOiJjanExdTFodjMwYXQyNDNuMmVvazV6eHBlIn0.kOpHKEx5EBGD8YIXmKRQWA";
-let mMap = null;
-let mFeatures = [];
-let baseLayer = null;
-let searchControl = null;
-let bounds = new L.LatLngBounds(
-  new L.LatLng(33.1414, -13.6017),
-  new L.LatLng(42.9142, 8.5772)
+"pk.eyJ1IjoiYW5kcmVzOTYxOSIsImEiOiJjanExdTFodjMwYXQyNDNuMmVvazV6eHBlIn0.kOpHKEx5EBGD8YIXmKRQWA";
+const URL = "https://www.todosurf.com/dev/config/classes/geojson.php";
+
+const BOUNDS = new L.LatLngBounds(
+  new L.LatLng(26.947964584439234, -18.859612147656208),
+  new L.LatLng(46.60176240818251, 5.8376534773437925)
 );
 const MAP_OPTIONS = {
-  center: [38.645, -9.019],
+  center: BOUNDS.getCenter(),
   zoom: 5,
-  maxBounds: bounds,
+  maxBounds: BOUNDS,
   maxBoundsViscosity: 1
 };
+
+let mMap = null;
+let mFeatures = [];
+let categories = {};
+let category = "";
+let baseLayer = null;
+
 $(document).ready(() => {
   mMap = L.map("mapid", MAP_OPTIONS);
   baseLayer = L.tileLayer(TILE_LAYER, {
@@ -25,64 +28,76 @@ $(document).ready(() => {
     id: "mapbox.satellite",
     accessToken: TOKEN
   });
+
   baseLayer.addTo(mMap);
   loadSurfingFeatures();
-  mMap.on("click", onMapClick);
+
 });
-//TODO: Check the layers loaded to searchcontrol may be affected by cluster layer
+
 const loadSurfingFeatures = async () => {
-  var markers = L.markerClusterGroup();
-  var result = await fetch(API);
-  var data = await result.json();
+  // var result = await fetch(URL);
+  // var data = await result.json();
+  var data = GEO_JSON;
   var features = new L.GeoJSON(data.features, {
-    style: feature => {
-      return { color: feature.properties.color };
-    },
-    onEachFeature: (feature, marker) => {
-      marker.bindPopup(
-        '<h4 style="color:' +
-          getRandomColor() +
-          '">' +
-          feature.properties.Texto +
-          "</h4>"
-      );
-    }
+    pointToLayer,
+    onEachFeature
   });
+
   mFeatures = features;
-  markers.addLayer(mFeatures);
-  mMap.addLayer(markers);
+  // mMap.addLayer(mFeatures);
   // loadSearchControl()
   loadGroupedLayers();
 };
 
+const onEachFeature = (feature, layer) => {
+  category = feature.properties.prioridad;
+  if (typeof categories[category] === "undefined") {
+    categories[category] = [];
+  }
+  categories[category].push(layer);
+};
+
+const pointToLayer = (feature, latlng) => {
+  let text = `<div ><a target="_blank" href="${
+    feature.properties.enlace
+  }" > 
+  ${feature.properties.nombre} 
+  </a></div>`;
+  let mIcon = L.divIcon({
+    iconSize: [8, 8],
+    iconAnchor: [5, 5],
+    html: ""
+  });
+  return L.marker(latlng, {
+    icon: mIcon
+  }).bindTooltip(text, { permanent: true, interactive: true });
+};
+
 const loadGroupedLayers = () => {
+  var overlaysObj = {},
+    categoryName,
+    categoryArray,
+    categoryLG;
+
+  for (categoryName in categories) {
+    categoryArray = categories[categoryName];
+    categoryLG = L.layerGroup(categoryArray);
+    categoryLG.categoryName = categoryName;
+    overlaysObj[categoryName] = categoryLG;
+  }
+  // mMap.addLayer(overlaysObj["0"]);
+  mMap.addLayer(overlaysObj["1"]);
+
   var groupedOverlays = {
-    "Capas propias": {
-      Puertos: mFeatures
+    Prioridad: {
+      "1": overlaysObj["1"]
+      // "0": overlaysObj["0"]
     }
   };
   var mapabase = {
     "Capa base": baseLayer
   };
   L.control.groupedLayers(mapabase, groupedOverlays).addTo(mMap);
-};
-
-const loadSearchControl = () => {
-  searchControl = new L.Control.Search({
-    layer: mFeatures,
-    propertyName: "Texto",
-    marker: false
-    // moveToLocation:  (latlng  , title, map) {
-    //     //map.fitBounds( latlng.layer.getBounds() );
-    //     var zoom = map.getBoundsZoom(latlng.layer.getBounds());
-    //     map.setView(latlng, zoom); // access the zoom
-    // }
-  });
-  searchControl
-    .on("search:locationfound", onSearchLocationFound)
-    .on("search:collapsed", onSearchCollapsed);
-
-  mMap.addControl(searchControl); //inizialize search control
 };
 
 const getRandomColor = () => {
@@ -92,29 +107,4 @@ const getRandomColor = () => {
     color += letters[Math.floor(Math.random() * 16)];
   }
   return color;
-};
-
-const onSearchLocationFound = e => {
-  console.log("search:locationfound", e);
-  // e.layer.setStyle({ fillColor: '#3f0', color: '#0f0' });
-  if (e.layer._popup) e.layer.openPopup();
-};
-
-const onSearchCollapsed = e => {
-  mFeatures.eachLayer(layer => {
-    //restore feature color
-    mFeatures.resetStyle(layer);
-  });
-};
-
-const onLocationError = e => {
-  alert(e.message);
-};
-
-const onMapClick = e => {
-  var popup = L.popup();
-  popup
-    .setLatLng(e.latlng)
-    .setContent("You clicked the map at " + e.latlng.toString())
-    .openOn(mMap);
 };
