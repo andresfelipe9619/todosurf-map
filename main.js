@@ -10,7 +10,7 @@ const BOUNDS = new L.LatLngBounds(
 );
 const MAP_OPTIONS = {
   center: BOUNDS.getCenter(),
-  zoom: 5,
+  zoom: 3,
   maxBounds: BOUNDS,
   maxBoundsViscosity: 1
 };
@@ -19,26 +19,30 @@ let mMap = null;
 let mFeatures = [];
 let categories = {};
 let baseLayer = null;
+let overlaysObj = {};
 
+// ************************ MAIN ******************
 $(document).ready(() => {
   mMap = L.map("mapid", MAP_OPTIONS);
   baseLayer = L.tileLayer(TILE_LAYER, {
-    maxZoom: 18,
+    maxZoom: 20,
     id: "mapbox.light",
     accessToken: TOKEN
   });
-
   baseLayer.addTo(mMap);
   loadSurfingFeatures();
+  mMap.on("zoomend", handleOnZoomEnd);
 });
+// ************************ END MAIN ******************
 
+// ************************ COMMAND FUNCTIONS ******************
 const loadSurfingFeatures = async () => {
   // let result = await fetch(URL);
   // let data = await result.json();
-  let data = GEO_JSON;
-  let features = new L.GeoJSON(data.features, {
+
+  let features = new L.GeoJSON(GEO_JSON.features, {
     pointToLayer,
-    onEachFeature
+    onEachFeature: handleOnEachFeature
   });
 
   mFeatures = features;
@@ -47,25 +51,122 @@ const loadSurfingFeatures = async () => {
   loadGroupedLayers();
 };
 
-const onEachFeature = (feature, layer) => {
-  let category = feature.properties.prioridad;
-  let source = feature
-  $("#searchboxinput").autocomplete({
-    source: [
-      "c++",
-      "java",
-      "php",
-      "coldfusion",
-      "javascript",
-      "asp",
-      "ruby"
-    ]
+const loadGroupedLayers = () => {
+  let maxZoom = mMap.getMaxZoom();
+  let categoryName, categoryArray, categoryLayerGroup;
+  let zoomLevelsPerCategory = (maxZoom - 2) / Object.keys(categories).length;
+
+  for (categoryName in categories) {
+    let category = categories[categoryName];
+    let categoryLength = category.length;
+    let featuresPerZoomLevel = Math.ceil(
+      categoryLength / zoomLevelsPerCategory
+    );
+    let splitedArray = splitBy(featuresPerZoomLevel, category);
+    let features = Object.assign({}, splitedArray);
+    console.log("features", features);
+    overlaysObj[categoryName] = {};
+    for (let i in features) {
+      categoryArray = features[i];
+      categoryLayerGroup = L.layerGroup(categoryArray);
+      categoryLayerGroup.categoryName = `${categoryName}${i}`;
+      overlaysObj[categoryName][`${categoryName}${i}`] = categoryLayerGroup;
+    }
+    console.log("OVERLAYS", overlaysObj);
+  }
+  loadGroupedLayerControl();
+};
+
+const loadGroupedLayerControl = () => {
+  let groupedOverlays = {
+    Prioridad: {
+      "1": overlaysObj["1"]["11"],
+      "0": overlaysObj["0"]["00"]
+    }
+  };
+  let mapabase = {
+    "Capa base": baseLayer
+  };
+  L.control.groupedLayers(mapabase, groupedOverlays).addTo(mMap);
+};
+
+const loadAutocomplte = () => {
+  let source = GEO_JSON.features.map(feature => ({
+    label: feature.properties.nombre,
+    value: ""
+  }));
+  $("#searchboxinput").autocomplete();
+  $("#searchboxinput").autocomplete("option", "source", source);
+  $("#autocomplete").on("autocompleteselect", function(event, ui) {
+    console.log(ui.item.label); //grabs selected state name
+    ui.item.value = "";
   });
+};
+
+const loadSearchControl = () => {
+  let SearchBox = L.Control.extend({
+    options: { position: "topleft" },
+    onAdd: handleOnAdd
+  });
+  new SearchBox().addTo(mMap);
+  loadAutocomplte();
+};
+// ************************ END COMMAND FUNCTIONS ******************
+
+// ************************ EVENT HANDLERS ******************
+
+const handleOnEachFeature = (feature, layer) => {
+  let category = feature.properties.prioridad;
+
   if (typeof categories[category] === "undefined") {
     categories[category] = [];
   }
   categories[category].push(layer);
 };
+
+const handleOnZoomEnd = event => {
+  let currentZoom = mMap.getZoom();
+  console.log(currentZoom);
+  switch (currentZoom) {
+    case 7:
+      cleanMap();
+      mMap.addLayer(overlaysObj["0"]);
+      break;
+    case 9:
+      cleanMap();
+      mMap.addLayer(overlaysObj["1"]);
+      break;
+    case 11:
+      cleanMap();
+      mMap.addLayer(overlaysObj["0"]);
+      break;
+    case 13:
+      cleanMap();
+      mMap.addLayer(overlaysObj["1"]);
+      break;
+    default:
+      cleanMap();
+
+      break;
+  }
+};
+
+const handleOnAdd = () => {
+  let container = L.DomUtil.create("div");
+  container.id = "controlcontainer";
+  $(container).html(getControlHtmlContent());
+  setTimeout(() => {
+    $("#searchbox-searchbutton").click(handleOnSearch);
+  }, 1);
+  L.DomEvent.disableClickPropagation(container);
+  return container;
+};
+
+const handleOnSearch = event => {
+  let inputvalue = $("#searchboxinput").val();
+};
+
+// ************************ END EVENT HANDLERS ******************
 
 const pointToLayer = (feature, latlng) => {
   let text = `<div ><a target="_blank" href="${feature.properties.enlace}" > 
@@ -81,65 +182,27 @@ const pointToLayer = (feature, latlng) => {
   }).bindTooltip(text, { permanent: true, interactive: true });
 };
 
-const loadGroupedLayers = () => {
-  let overlaysObj = {},
-    categoryName,
-    categoryArray,
-    categoryLG;
-
-  for (categoryName in categories) {
-    categoryArray = categories[categoryName];
-    categoryLG = L.layerGroup(categoryArray);
-    categoryLG.categoryName = categoryName;
-    overlaysObj[categoryName] = categoryLG;
-  }
-  // mMap.addLayer(overlaysObj["0"]);
-  mMap.addLayer(overlaysObj["1"]);
-
-  let groupedOverlays = {
-    Prioridad: {
-      "1": overlaysObj["1"]
-      // "0": overlaysObj["0"]
-    }
-  };
-  let mapabase = {
-    "Capa base": baseLayer
-  };
-  L.control.groupedLayers(mapabase, groupedOverlays).addTo(mMap);
-};
-
-const loadSearchControl = () => {
-  let SearchBox = L.Control.extend({
-    options: { position: "topleft" },
-    onAdd: () => {
-      let container = L.DomUtil.create("div");
-      container.id = "controlcontainer";
-      $(container).html(getControlHtmlContent());
-      setTimeout(() => {
-
-        $("#searchbox-searchbutton").click(handleOnSearch());
-      }, 1);
-      L.DomEvent.disableClickPropagation(container);
-      return container;
-    }
-  });
-  new SearchBox().addTo(mMap);
-};
-
-
-const handleOnSearch = event => {
-  let inputvalue = $("#searchboxinput").val()
-
-};
-const clearMap = () => {
+const cleanMap = () => {
+  // mMap.removeLayer(overlaysObj["0"])
+  // overlaysObj["0"].length = 0;
   mMap.eachLayer(layer => {
-    if (layer instanceof L.GeoJSON) {
+    if (layer instanceof L.layerGroup) {
+      console.log("layer", Object.getPrototypeOf(layer));
       //Do marker specific actions here
 
       mMap.removeLayer(layer);
+      layer.length = 0;
     }
-    console.log(layer);
   });
+};
+
+const splitBy = (size, list) => {
+  return list.reduce((acc, curr, i, self) => {
+    if (!(i % size)) {
+      return [...acc, self.slice(i, i + size)];
+    }
+    return acc;
+  }, []);
 };
 
 const getControlHtmlContent = () => {
