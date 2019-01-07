@@ -26,102 +26,10 @@
     />
     <link
       rel="stylesheet"
-      href="//code.jquery.com/ui/1.12.1/themes/smoothness/jquery-ui.css"
-    />
-    <link
-      rel="stylesheet"
       href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
     />
-
+    <link rel="stylesheet" href="./styles.css">
     <script src="./data.js"></script>
-    <style>
-      html,
-      body {
-        height: 100%;
-        margin: 0;
-      }
-      .ui-menu-item {
-        z-index: 99998;
-      }
-      #mapid {
-        width: 600px;
-        height: 400px;
-      }
-      .leaflet-div-icon {
-        background: #a8a8a8;
-        border-radius: 50%;
-      }
-      .leaflet-tooltip {
-        border-color: #a8a8a8 !important;
-        background: #a8a8a8;
-        opacity: 1 !important;
-      }
-      .leaflet-tooltip-left::before {
-        border-left-color: #a8a8a8;
-      }
-      .leaflet-tooltip-right::before {
-        border-right-color: #a8a8a8;
-      }
-      ul#ui-id-1 {
-        display: block !important;
-        z-index: 99998 !important;
-      }
-      #controlbox {
-        position: fixed;
-        left: 30%;
-        top: 10px;
-        margin-top: -50px;
-        margin: 0 auto;
-        transition: left 0.5s;
-        -webkit-transform: translateX(0);
-        transform: translateX(0);
-        transition-property: -webkit-transform, transform, visibility, opacity;
-        transition-duration: 0.2s;
-        transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
-      }
-      #controlcontainer {
-        top: 0;
-        position: absolute;
-        z-index: 4;
-        margin: 0 !important;
-        bottom: 0;
-        height: 100%;
-      }
-      #searchboxinput:focus {
-        outline: none !important;
-        border: 1px solid red;
-        box-shadow: 0 0 10px #f89c29;
-      }
-      .search_icon {
-        height: 40px;
-        width: 40px;
-        float: right;
-        justify-content: center;
-        align-items: center;
-        border-radius: 50%;
-        color: #f89c29;
-      }
-      .searchbox {
-        position: relative;
-        background: #fff;
-        border-radius: 2px;
-        box-sizing: border-box;
-        width: 320px;
-        height: 48px;
-        border-bottom: 1px solid transparent;
-        padding: 12px 70px 11px;
-        transition-property: background, box-shadow;
-        transition-duration: 0.3s;
-      }
-      .searchbox-shadow {
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), 0 -1px 0 rgba(0, 0, 0, 0.02);
-      }
-
-      #searchboxinput {
-        width: 100%;
-      }
-    </style>
-
     <style>
       body {
         padding: 0;
@@ -157,7 +65,6 @@
     integrity="sha512-nMMmRyTVoLYqjP9hrbed9S+FzjZHW5gY1TWCHA5ckwXZBadntCNs8kEqAWdrb9O7rxbCaA4lKTIWjDXZxflOcA=="
     crossorigin=""
   ></script>
-  <script src="./lib/leaflet-search/dist/leaflet-search.min.js"></script>
   <script src="./lib/leaflet-groupedlayercontrol/dist/leaflet.groupedlayercontrol.min.js"></script>
   <script src="./main.js"></script>
 </html>

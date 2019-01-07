@@ -16,10 +16,11 @@ const MAP_OPTIONS = {
 };
 
 let mMap = null;
-let baseLayer = null;
 let categories = {};
 let overlaysObj = {};
-let mFeatures = [];
+let layersBasedOnZoom = {};
+let baseLayer = null;
+// let mFeatures = [];
 let layersZoomStack = { lastZoom: undefined, stack: [] };
 
 // ************************ MAIN ******************
@@ -53,7 +54,7 @@ const loadSurfingFeatures = async () => {
     onEachFeature: handleOnEachFeature
   });
 
-  mFeatures = features;
+  // mFeatures = features;
   // mMap.addLayer(mFeatures);
   loadSearchControl();
   loadGroupedLayers();
@@ -74,12 +75,15 @@ const loadGroupedLayers = () => {
     let features = Object.assign({}, splitedArray);
     overlaysObj[categoryName] = {};
     for (let i in features) {
+      maxZoom--;
       categoryArray = features[i];
       categoryLayerGroup = L.layerGroup(categoryArray);
       categoryLayerGroup.categoryName = `${categoryName}${i}`;
       overlaysObj[categoryName][`${categoryName}${i}`] = categoryLayerGroup;
+      layersBasedOnZoom[maxZoom] = {};
+      layersBasedOnZoom[maxZoom]["layer"] = categoryLayerGroup;
     }
-    console.log("OVERLAYS =>", overlaysObj);
+    console.log("ZOOMS =>", layersBasedOnZoom);
   }
   loadGroupedLayerControl();
 };
@@ -127,7 +131,6 @@ const loadSearchControl = () => {
 
 const handleOnEachFeature = (feature, layer) => {
   let category = feature.properties.prioridad;
-
   if (typeof categories[category] === "undefined") {
     categories[category] = [];
   }
@@ -137,17 +140,17 @@ const handleOnEachFeature = (feature, layer) => {
 const handleOnZoomEnd = event => {
   let maxZoom = mMap.getMaxZoom();
   let currentZoom = mMap.getZoom();
-  let layersBaseZoom = {};
   console.log(currentZoom);
-  for (let i = maxZoom; i > 0; i--) {
-    layersBaseZoom[i] = () => {
+  for (let i = maxZoom - 2; i > 1; i--) {
+    console.log('i', i );
+    layersBasedOnZoom[i]["stack"] = () => {
       cleanMap();
-      mMap.addLayer(overlaysObj["1"]["10"]);
+      mMap.addLayer(layersBasedOnZoom[i]["layer"]);
     };
   }
-  console.log(layersBaseZoom);
-  if (layersBaseZoom && layersBaseZoom[currentZoom]) {
-    layersBaseZoom[currentZoom]();
+  // console.log(layersBasedOnZoom);
+  if (layersBasedOnZoom && layersBasedOnZoom[currentZoom]) {
+    layersBasedOnZoom[currentZoom]["stack"]();
   }
 };
 
@@ -209,11 +212,7 @@ const splitBy = (size, list) => {
     return acc;
   }, []);
 };
-{
-  /* <div id="boxcontainer" class="searchbox searchbox-shadow">
-<input id="searchboxinput" type="text" style="position: relative;" />
-</div> */
-}
+
 const getControlHtmlContent = () => {
   return `
   <div id="controlbox">
