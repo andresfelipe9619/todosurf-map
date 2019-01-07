@@ -28,6 +28,10 @@
       rel="stylesheet"
       href="//code.jquery.com/ui/1.12.1/themes/smoothness/jquery-ui.css"
     />
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
+    />
 
     <script src="./data.js"></script>
     <style>
@@ -36,23 +40,9 @@
         height: 100%;
         margin: 0;
       }
-      #searchBox {
-        position: fixed;
-        left: 30%;
-        top: 10px;
-        margin-top: -50px;
-        margin: 0 auto;
-        transition: left 0.5s;
-        -webkit-transform: translateX(0);
-        transform: translateX(0);
-        z-index: 99999;
-      }
       .ui-menu-item {
         z-index: 99998;
       }
-      /* .ui-menu-item-wrapper {
-      }  */
-
       #mapid {
         width: 600px;
         height: 400px;
@@ -72,17 +62,16 @@
       .leaflet-tooltip-right::before {
         border-right-color: #a8a8a8;
       }
-      ul#ui-id-1{
+      ul#ui-id-1 {
         display: block !important;
         z-index: 99998 !important;
-
       }
-
       #controlbox {
-        position: absolute;
-        left: 0;
-        margin: 16px;
-        top: 0;
+        position: fixed;
+        left: 30%;
+        top: 10px;
+        margin-top: -50px;
+        margin: 0 auto;
         transition: left 0.5s;
         -webkit-transform: translateX(0);
         transform: translateX(0);
@@ -98,15 +87,26 @@
         bottom: 0;
         height: 100%;
       }
-      #omnibox.vasquette-margin-enabled {
-        margin: 8px 0 8px 8px;
+      #searchboxinput:focus {
+        outline: none !important;
+        border: 1px solid red;
+        box-shadow: 0 0 10px #f89c29;
+      }
+      .search_icon {
+        height: 40px;
+        width: 40px;
+        float: right;
+        justify-content: center;
+        align-items: center;
+        border-radius: 50%;
+        color: #f89c29;
       }
       .searchbox {
         position: relative;
         background: #fff;
         border-radius: 2px;
         box-sizing: border-box;
-        width: 360px;
+        width: 320px;
         height: 48px;
         border-bottom: 1px solid transparent;
         padding: 12px 70px 11px;
@@ -119,40 +119,6 @@
 
       #searchboxinput {
         width: 100%;
-      }
-      .searchbox-searchbutton {
-        display: block;
-        padding: 2px 15px;
-        cursor: pointer;
-        opacity: 0.61;
-      }
-      .searchbox-searchbutton:hover {
-        opacity: 0.98;
-      }
-      .searchbox-searchbutton-container,
-      .searchbox-searchbutton-container::after {
-        content: "";
-        position: absolute;
-        right: 0;
-        top: 10px;
-        border-left: 1px solid #ddd;
-        height: 28px;
-      }
-      .searchbox-searchbutton::before {
-        content: "";
-        display: block;
-        width: 24px;
-        height: 24px;
-        /* background: url(image/ic_search_black_24dp_2x.png); */
-        background-size: 100%;
-        opacity: 0.5;
-      }
-      button::-moz-focus-inner,
-      input::-moz-focus-inner,
-      textarea::-moz-focus-inner {
-        margin: 0;
-        padding: 0;
-        border: 0;
       }
     </style>
 

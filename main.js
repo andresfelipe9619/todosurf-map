@@ -16,10 +16,11 @@ const MAP_OPTIONS = {
 };
 
 let mMap = null;
-let mFeatures = [];
-let categories = {};
 let baseLayer = null;
+let categories = {};
 let overlaysObj = {};
+let mFeatures = [];
+let layersZoomStack = { lastZoom: undefined, stack: [] };
 
 // ************************ MAIN ******************
 $(document).ready(() => {
@@ -39,8 +40,15 @@ $(document).ready(() => {
 const loadSurfingFeatures = async () => {
   // let result = await fetch(URL);
   // let data = await result.json();
+  let data = GEO_JSON.features.sort((a, b) => {
+    var nameA = a.properties.nombre.toLowerCase(),
+      nameB = b.properties.nombre.toLowerCase();
+    if (nameA < nameB) return -1;
+    if (nameA > nameB) return 1;
+    return 0;
+  });
 
-  let features = new L.GeoJSON(GEO_JSON.features, {
+  let features = new L.GeoJSON(data, {
     pointToLayer,
     onEachFeature: handleOnEachFeature
   });
@@ -64,7 +72,6 @@ const loadGroupedLayers = () => {
     );
     let splitedArray = splitBy(featuresPerZoomLevel, category);
     let features = Object.assign({}, splitedArray);
-    console.log("features", features);
     overlaysObj[categoryName] = {};
     for (let i in features) {
       categoryArray = features[i];
@@ -72,17 +79,20 @@ const loadGroupedLayers = () => {
       categoryLayerGroup.categoryName = `${categoryName}${i}`;
       overlaysObj[categoryName][`${categoryName}${i}`] = categoryLayerGroup;
     }
-    console.log("OVERLAYS", overlaysObj);
+    console.log("OVERLAYS =>", overlaysObj);
   }
   loadGroupedLayerControl();
 };
 
 const loadGroupedLayerControl = () => {
-  let groupedOverlays = {
-    Prioridad: {
-      "1": overlaysObj["1"]["11"],
-      "0": overlaysObj["0"]["00"]
+  let priority = {};
+  for (let i in overlaysObj) {
+    for (let j in overlaysObj[i]) {
+      priority[j] = overlaysObj[i][j];
     }
+  }
+  let groupedOverlays = {
+    Prioridades: priority
   };
   let mapabase = {
     "Capa base": baseLayer
@@ -97,7 +107,7 @@ const loadAutocomplte = () => {
   }));
   $("#searchboxinput").autocomplete();
   $("#searchboxinput").autocomplete("option", "source", source);
-  $("#autocomplete").on("autocompleteselect", function(event, ui) {
+  $("#autocomplete").on("autocompleteselect", (event, ui) => {
     console.log(ui.item.label); //grabs selected state name
     ui.item.value = "";
   });
@@ -125,29 +135,19 @@ const handleOnEachFeature = (feature, layer) => {
 };
 
 const handleOnZoomEnd = event => {
+  let maxZoom = mMap.getMaxZoom();
   let currentZoom = mMap.getZoom();
+  let layersBaseZoom = {};
   console.log(currentZoom);
-  switch (currentZoom) {
-    case 7:
+  for (let i = maxZoom; i > 0; i--) {
+    layersBaseZoom[i] = () => {
       cleanMap();
-      mMap.addLayer(overlaysObj["0"]);
-      break;
-    case 9:
-      cleanMap();
-      mMap.addLayer(overlaysObj["1"]);
-      break;
-    case 11:
-      cleanMap();
-      mMap.addLayer(overlaysObj["0"]);
-      break;
-    case 13:
-      cleanMap();
-      mMap.addLayer(overlaysObj["1"]);
-      break;
-    default:
-      cleanMap();
-
-      break;
+      mMap.addLayer(overlaysObj["1"]["10"]);
+    };
+  }
+  console.log(layersBaseZoom);
+  if (layersBaseZoom && layersBaseZoom[currentZoom]) {
+    layersBaseZoom[currentZoom]();
   }
 };
 
@@ -156,14 +156,15 @@ const handleOnAdd = () => {
   container.id = "controlcontainer";
   $(container).html(getControlHtmlContent());
   setTimeout(() => {
-    $("#searchbox-searchbutton").click(handleOnSearch);
+    $("#searchbox-searchbutton").on("click", handleOnSearch);
   }, 1);
   L.DomEvent.disableClickPropagation(container);
   return container;
 };
 
-const handleOnSearch = event => {
+const handleOnSearch = () => {
   let inputvalue = $("#searchboxinput").val();
+  console.log(inputvalue);
 };
 
 // ************************ END EVENT HANDLERS ******************
@@ -179,7 +180,11 @@ const pointToLayer = (feature, latlng) => {
   });
   return L.marker(latlng, {
     icon: mIcon
-  }).bindTooltip(text, { permanent: true, interactive: true });
+  }).bindTooltip(text, {
+    direction: "auto",
+    permanent: true,
+    interactive: true
+  });
 };
 
 const cleanMap = () => {
@@ -204,20 +209,32 @@ const splitBy = (size, list) => {
     return acc;
   }, []);
 };
-
+{
+  /* <div id="boxcontainer" class="searchbox searchbox-shadow">
+<input id="searchboxinput" type="text" style="position: relative;" />
+</div> */
+}
 const getControlHtmlContent = () => {
   return `
   <div id="controlbox">
-  <div id="boxcontainer" class="searchbox searchbox-shadow">
-    <input id="searchboxinput" type="text" style="position: relative;" />
-  </div>
-  <div class="searchbox-searchbutton-container">
-    <button
-      aria-label="search"
-      id="searchbox-searchbutton"
-      class="searchbox-searchbutton"
-    ></button>
-    <span aria-hidden="true" style="display:none;">search</span>
+  <div class="input-group mb-3 ">
+    <div class="input-group-prepend">
+      <input
+        id="searchboxinput"
+        class="form-control"
+        type="text"
+        name=""
+        placeholder="Search..."
+      />
+      <button
+        aria-label="search"
+        id="searchbox-searchbutton"
+        class="btn search_icon"
+        type="button"
+      >
+        <i class="fa fa-search fa-flip-horizontal"></i>
+      </button>
+    </div>
   </div>
 </div>`;
 };
