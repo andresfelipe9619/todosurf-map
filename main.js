@@ -105,15 +105,21 @@ const loadGroupedLayerControl = () => {
 };
 
 const loadAutocomplte = () => {
-  let source = GEO_JSON.features.map(feature => ({
-    label: feature.properties.nombre,
-    value: ""
+  let data = GEO_JSON.features.map(feature => ({
+    id: feature.id,
+    text: feature.properties.nombre
   }));
-  $("#searchboxinput").autocomplete();
-  $("#searchboxinput").autocomplete("option", "source", source);
-  $("#autocomplete").on("autocompleteselect", (event, ui) => {
-    console.log(ui.item.label); //grabs selected state name
-    ui.item.value = "";
+  $.fn.select2.defaults.set("theme", "bootstrap");
+  $("#search-box").select2({
+    placeholder: "Selecciona una playa",
+    data,
+    width: "85%"
+  });
+  $('#search-box').on('select2:select', function (e) {
+    console.log('U just selected ==>', e)
+  });
+  $("button[data-select2-open]").click(function() {
+    $("#" + $(this).data("select2-open")).select2("open");
   });
 };
 
@@ -142,7 +148,7 @@ const handleOnZoomEnd = event => {
   let currentZoom = mMap.getZoom();
   console.log(currentZoom);
   for (let i = maxZoom - 2; i > 1; i--) {
-    console.log('i', i );
+    console.log("i", i);
     layersBasedOnZoom[i]["stack"] = () => {
       cleanMap();
       mMap.addLayer(layersBasedOnZoom[i]["layer"]);
@@ -158,15 +164,12 @@ const handleOnAdd = () => {
   let container = L.DomUtil.create("div");
   container.id = "controlcontainer";
   $(container).html(getControlHtmlContent());
-  setTimeout(() => {
-    $("#searchbox-searchbutton").on("click", handleOnSearch);
-  }, 1);
   L.DomEvent.disableClickPropagation(container);
   return container;
 };
 
 const handleOnSearch = () => {
-  let inputvalue = $("#searchboxinput").val();
+  let inputvalue = $("#search-box").val();
   console.log(inputvalue);
 };
 
@@ -185,7 +188,7 @@ const pointToLayer = (feature, latlng) => {
     icon: mIcon
   }).bindTooltip(text, {
     direction: "auto",
-    permanent: true,
+    permanent: false,
     interactive: true
   });
 };
@@ -215,25 +218,18 @@ const splitBy = (size, list) => {
 
 const getControlHtmlContent = () => {
   return `
-  <div id="controlbox">
-  <div class="input-group mb-3 ">
-    <div class="input-group-prepend">
-      <input
-        id="searchboxinput"
-        class="form-control"
-        type="text"
-        name=""
-        placeholder="Search..."
-      />
-      <button
-        aria-label="search"
-        id="searchbox-searchbutton"
-        class="btn search_icon"
-        type="button"
-      >
-        <i class="fa fa-search fa-flip-horizontal"></i>
+ <div id="controlbox">
+  <div class="form-group">
+  <div class="input-group">
+    <select id="search-box" class="form-control select2-allow-clear">
+    <option></option>
+    </select>
+    <span class="input-group-btn">
+      <button id="btn-search" class="btn btn-default " type="button" data-select2-open="search-box">
+      <span class="fa fa-search fa-flip-horizontal"></span>
       </button>
-    </div>
+    </span>
+  </div>
   </div>
 </div>`;
 };
