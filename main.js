@@ -64,7 +64,7 @@ const loadGroupedLayers = () => {
   let maxZoom = mMap.getMaxZoom();
   let categoryName, categoryArray, categoryLayerGroup;
   let zoomLevelsPerCategory = (maxZoom - 2) / Object.keys(categories).length;
-
+  let layerZoom = maxZoom;
   for (categoryName in categories) {
     let category = categories[categoryName];
     let categoryLength = category.length;
@@ -75,19 +75,24 @@ const loadGroupedLayers = () => {
     let features = Object.assign({}, splitedArray);
     overlaysObj[categoryName] = {};
     for (let i in features) {
-      maxZoom--;
+      layerZoom--;
       categoryArray = features[i];
       categoryLayerGroup = L.layerGroup(categoryArray);
       categoryLayerGroup.categoryName = `${categoryName}${i}`;
       overlaysObj[categoryName][`${categoryName}${i}`] = categoryLayerGroup;
-      layersBasedOnZoom[maxZoom] = {};
-      layersBasedOnZoom[maxZoom]["layer"] = categoryLayerGroup;
+      layersBasedOnZoom[layerZoom] = {};
+      layersBasedOnZoom[layerZoom]["layer"] = categoryLayerGroup;
+      layersBasedOnZoom[layerZoom]["stack"] = () => {
+        cleanMap();
+        mMap.addLayer(layersBasedOnZoom[layerZoom]["layer"]);
+      };
     }
     console.log("ZOOMS =>", layersBasedOnZoom);
   }
   loadGroupedLayerControl();
 };
 
+//Initialize grouped layers control
 const loadGroupedLayerControl = () => {
   let priority = {};
   for (let i in overlaysObj) {
@@ -104,7 +109,9 @@ const loadGroupedLayerControl = () => {
   L.control.groupedLayers(mapabase, groupedOverlays).addTo(mMap);
 };
 
+//Initialize select2 and it's bootstrap theme
 const loadAutocomplte = () => {
+  //Create select2 data schema
   let data = GEO_JSON.features.map(feature => ({
     id: feature.id,
     text: feature.properties.nombre
@@ -115,14 +122,17 @@ const loadAutocomplte = () => {
     data,
     width: "85%"
   });
-  $('#search-box').on('select2:select', function (e) {
-    console.log('U just selected ==>', e)
+
+  $("#search-box").on("select2:select", e => {
+    console.log("U just selected ==>", e);
   });
-  $("button[data-select2-open]").click(function() {
+  $("button[data-select2-open]").click(() => {
     $("#" + $(this).data("select2-open")).select2("open");
   });
 };
 
+//Create search control by extending leaflet control
+//a control is a HTML element that remains static relative to the map container
 const loadSearchControl = () => {
   let SearchBox = L.Control.extend({
     options: { position: "topleft" },
@@ -144,18 +154,12 @@ const handleOnEachFeature = (feature, layer) => {
 };
 
 const handleOnZoomEnd = event => {
-  let maxZoom = mMap.getMaxZoom();
   let currentZoom = mMap.getZoom();
   console.log(currentZoom);
-  for (let i = maxZoom - 2; i > 1; i--) {
-    console.log("i", i);
-    layersBasedOnZoom[i]["stack"] = () => {
-      cleanMap();
-      mMap.addLayer(layersBasedOnZoom[i]["layer"]);
-    };
-  }
+
   // console.log(layersBasedOnZoom);
   if (layersBasedOnZoom && layersBasedOnZoom[currentZoom]) {
+    console.log("tell me sir");
     layersBasedOnZoom[currentZoom]["stack"]();
   }
 };
@@ -207,10 +211,11 @@ const cleanMap = () => {
   });
 };
 
-const splitBy = (size, list) => {
-  return list.reduce((acc, curr, i, self) => {
-    if (!(i % size)) {
-      return [...acc, self.slice(i, i + size)];
+//Just split and Array in N parts
+const splitBy = (n, a) => {
+  return a.reduce((acc, curr, i, self) => {
+    if (!(i % n)) {
+      return [...acc, self.slice(i, i + n)];
     }
     return acc;
   }, []);
