@@ -27,7 +27,7 @@ let layersZoomStack = { lastZoom: undefined, stack: [] };
 $(document).ready(() => {
   mMap = L.map("mapid", MAP_OPTIONS);
   baseLayer = L.tileLayer(TILE_LAYER, {
-    maxZoom: 20,
+    maxZoom: 12,
     id: "mapbox.light",
     accessToken: TOKEN
   });
@@ -63,7 +63,12 @@ const loadSurfingFeatures = async () => {
 const loadGroupedLayers = () => {
   let maxZoom = mMap.getMaxZoom();
   let categoryName, categoryArray, categoryLayerGroup;
-  let zoomLevelsPerCategory = (maxZoom - 2) / Object.keys(categories).length;
+  let zoomLevelsPerCategory = maxZoom / Object.keys(categories).length;
+  zoomLevelsPerCategory =
+    zoomLevelsPerCategory % 0
+      ? zoomLevelsPerCategory
+      : zoomLevelsPerCategory + 1;
+
   let layerZoom = maxZoom;
   for (categoryName in categories) {
     let category = categories[categoryName];
@@ -82,10 +87,10 @@ const loadGroupedLayers = () => {
       overlaysObj[categoryName][`${categoryName}${i}`] = categoryLayerGroup;
       layersBasedOnZoom[layerZoom] = {};
       layersBasedOnZoom[layerZoom]["layer"] = categoryLayerGroup;
-      layersBasedOnZoom[layerZoom]["stack"] = () => {
-        cleanMap();
-        mMap.addLayer(layersBasedOnZoom[layerZoom]["layer"]);
-      };
+      // layersBasedOnZoom[layerZoom]["stack"] = () => {
+      //   cleanMap();
+      //   mMap.addLayer(layersBasedOnZoom[layerZoom]["layer"]);
+      // };
     }
     console.log("ZOOMS =>", layersBasedOnZoom);
   }
@@ -131,7 +136,7 @@ const loadAutocomplte = () => {
   });
 };
 
-//Create search control by extending leaflet control
+//Create custom search control by extending leaflet control
 //a control is a HTML element that remains static relative to the map container
 const loadSearchControl = () => {
   let SearchBox = L.Control.extend({
@@ -154,12 +159,24 @@ const handleOnEachFeature = (feature, layer) => {
 };
 
 const handleOnZoomEnd = event => {
+  let maxZoom = mMap.getMaxZoom();
   let currentZoom = mMap.getZoom();
   console.log(currentZoom);
+  for (let i = maxZoom - 2; i > 1; i--) {
+    // console.log("i", i);
+    layersBasedOnZoom[i]["stack"] = () => {
+      // cleanMap();
+      if(mMap.hasLayer(layersBasedOnZoom[i]["layer"])){
+        mMap.removeLayer(layersBasedOnZoom[i]["layer"])
+      }else{
+        mMap.addLayer(layersBasedOnZoom[i]["layer"]);
+      }
+    };
+  }
 
   // console.log(layersBasedOnZoom);
   if (layersBasedOnZoom && layersBasedOnZoom[currentZoom]) {
-    console.log("tell me sir");
+    // console.log("tell me sir", layersBasedOnZoom);
     layersBasedOnZoom[currentZoom]["stack"]();
   }
 };
@@ -188,13 +205,22 @@ const pointToLayer = (feature, latlng) => {
     iconAnchor: [4, 4],
     html: ""
   });
-  return L.marker(latlng, {
+
+  let marker = L.marker(latlng, {
     icon: mIcon
-  }).bindTooltip(text, {
+  });
+
+  marker.on("click", function(e) {
+    window.open(feature.properties.enlace, '_blank');
+  });
+
+  let tooltip = marker.bindTooltip(text, {
     direction: "auto",
     permanent: false,
     interactive: true
   });
+
+  return tooltip;
 };
 
 const cleanMap = () => {
