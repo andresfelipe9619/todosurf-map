@@ -11,6 +11,7 @@ const BOUNDS = new L.LatLngBounds(
 const MAP_OPTIONS = {
   center: BOUNDS.getCenter(),
   zoom: 3,
+  maxZoom: 12,
   maxBounds: BOUNDS,
   maxBoundsViscosity: 1
 };
@@ -20,8 +21,9 @@ let categories = {};
 let overlaysObj = {};
 let layersBasedOnZoom = {};
 let baseLayer = null;
-// let mFeatures = [];
 let layersZoomStack = { lastZoom: undefined, stack: [] };
+let markers = new L.layerGroup();
+let autoCompleteData = [];
 
 // ************************ MAIN ******************
 $(document).ready(() => {
@@ -31,31 +33,25 @@ $(document).ready(() => {
     id: "mapbox.light",
     accessToken: TOKEN
   });
+  if (L.Browser.touch) {
+    L.control.touchHover().addTo(mMap);
+  }
   baseLayer.addTo(mMap);
   loadSurfingFeatures();
   mMap.on("zoomend", handleOnZoomEnd);
-});
+}); 
 // ************************ END MAIN ******************
 
 // ************************ COMMAND FUNCTIONS ******************
 const loadSurfingFeatures = async () => {
   // let result = await fetch(URL);
   // let data = await result.json();
-  let data = GEO_JSON.features.sort((a, b) => {
-    var nameA = a.properties.nombre.toLowerCase(),
-      nameB = b.properties.nombre.toLowerCase();
-    if (nameA < nameB) return -1;
-    if (nameA > nameB) return 1;
-    return 0;
-  });
-
-  let features = new L.GeoJSON(data, {
+  let data = GEO_JSON;
+  let layers = new L.GeoJSON(data, {
     pointToLayer,
     onEachFeature: handleOnEachFeature
   });
 
-  // mFeatures = features;
-  // mMap.addLayer(mFeatures);
   loadSearchControl();
   loadGroupedLayers();
 };
@@ -114,30 +110,8 @@ const loadGroupedLayerControl = () => {
   L.control.groupedLayers(mapabase, groupedOverlays).addTo(mMap);
 };
 
-//Initialize select2 and it's bootstrap theme
-const loadAutocomplte = () => {
-  //Create select2 data schema
-  let data = GEO_JSON.features.map(feature => ({
-    id: feature.id,
-    text: feature.properties.nombre
-  }));
-  $.fn.select2.defaults.set("theme", "bootstrap");
-  $("#search-box").select2({
-    placeholder: "Selecciona una playa",
-    data,
-    width: "85%"
-  });
-
-  $("#search-box").on("select2:select", e => {
-    console.log("U just selected ==>", e);
-  });
-  $("button[data-select2-open]").click(() => {
-    $("#" + $(this).data("select2-open")).select2("open");
-  });
-};
-
 //Create custom search control by extending leaflet control
-//a control is a HTML element that remains static relative to the map container
+//a control is a HTML element that remains static relativfe to the map container
 const loadSearchControl = () => {
   let SearchBox = L.Control.extend({
     options: { position: "topleft" },
@@ -146,6 +120,24 @@ const loadSearchControl = () => {
   new SearchBox().addTo(mMap);
   loadAutocomplte();
 };
+
+//Initialize select2 and it's bootstrap theme
+const loadAutocomplte = () => {
+  //Create select2 data schema
+  let data = autoCompleteData;
+  $.fn.select2.defaults.set("theme", "bootstrap");
+  $("#search-box").select2({
+    placeholder: "Selecciona una playa",
+    data,
+    width: "80%"
+  });
+
+  $("#search-box").on("select2:select", handleOnSearch);
+  $("button[data-select2-open]").click(() => {
+    $("#search-box").select2("open");
+  });
+};
+
 // ************************ END COMMAND FUNCTIONS ******************
 
 // ************************ EVENT HANDLERS ******************
@@ -166,9 +158,9 @@ const handleOnZoomEnd = event => {
     // console.log("i", i);
     layersBasedOnZoom[i]["stack"] = () => {
       // cleanMap();
-      if(mMap.hasLayer(layersBasedOnZoom[i]["layer"])){
-        mMap.removeLayer(layersBasedOnZoom[i]["layer"])
-      }else{
+      if (mMap.hasLayer(layersBasedOnZoom[i]["layer"])) {
+        mMap.removeLayer(layersBasedOnZoom[i]["layer"]);
+      } else {
         mMap.addLayer(layersBasedOnZoom[i]["layer"]);
       }
     };
@@ -189,9 +181,11 @@ const handleOnAdd = () => {
   return container;
 };
 
-const handleOnSearch = () => {
-  let inputvalue = $("#search-box").val();
-  console.log(inputvalue);
+const handleOnSearch = e => {
+  let { marker } = e.params.data;
+  mMap.addLayer(marker);
+  mMap.setView(marker.getLatLng(), 8);
+  marker.openTooltip();
 };
 
 // ************************ END EVENT HANDLERS ******************
@@ -200,22 +194,32 @@ const pointToLayer = (feature, latlng) => {
   let text = `<div ><a target="_blank" href="${feature.properties.enlace}" > 
   ${feature.properties.nombre} 
   </a></div>`;
-  let mIcon = L.divIcon({
+  let mIcon, marker, tooltip;
+  mIcon = L.divIcon({
     iconSize: [8, 8],
     iconAnchor: [4, 4],
     html: ""
   });
 
-  let marker = L.marker(latlng, {
+  marker = L.marker(latlng, {
     icon: mIcon
   });
 
-  marker.on("click", function(e) {
-    window.open(feature.properties.enlace, '_blank');
+  marker.on("click", e => {
+    // window.open(feature.properties.enlace, "_blank");
+
+    marker.openTooltip();
   });
 
-  let tooltip = marker.bindTooltip(text, {
-    direction: "auto",
+  autoCompleteData.push({
+    id: feature.id,
+    text: feature.properties.nombre,
+    marker: marker
+  });
+
+  markers.addLayer(marker);
+  tooltip = marker.bindTooltip(text, {
+    direction: "top",
     permanent: false,
     interactive: true
   });

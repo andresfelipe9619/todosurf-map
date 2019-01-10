@@ -13,7 +13,18 @@
 .leaflet-tooltip-right::before {
   border-right-color: #a8a8a8;
 }
+.leaflet-tooltip-top:before {
+  border-top-color: #a8a8a8 ;
 
+}
+/* .leaflet-popup-content-wrapper {
+}
+
+.leaflet-popup-content-wrapper .leaflet-popup-content {
+}
+
+.leaflet-popup-tip-container {
+} */
 #controlbox {
   position: fixed;
   left: 20%;
@@ -49,5 +60,11 @@
   #controlbox {
     left: 30%;
     width: 30%;
+  }
+}
+@media (max-width: 420px) {
+  #controlbox {
+    left: 20%;
+    width: 60%;
   }
 }
