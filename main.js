@@ -39,7 +39,7 @@ $(document).ready(() => {
   baseLayer.addTo(mMap);
   loadSurfingFeatures();
   mMap.on("zoomend", handleOnZoomEnd);
-}); 
+});
 // ************************ END MAIN ******************
 
 // ************************ COMMAND FUNCTIONS ******************
@@ -59,24 +59,25 @@ const loadSurfingFeatures = async () => {
 const loadGroupedLayers = () => {
   let maxZoom = mMap.getMaxZoom();
   let categoryName, categoryArray, categoryLayerGroup;
-  let zoomLevelsPerCategory = maxZoom / Object.keys(categories).length;
-  zoomLevelsPerCategory =
-    zoomLevelsPerCategory % 0
-      ? zoomLevelsPerCategory
-      : zoomLevelsPerCategory + 1;
+  //Get the number of zoom levels a category can take
+  let zoomLevelsPerCategory = Math.ceil(
+    maxZoom / Object.keys(categories).length
+  );
 
   let layerZoom = maxZoom;
+  //iterate over the  categories (priorities)
   for (categoryName in categories) {
     let category = categories[categoryName];
     let categoryLength = category.length;
+    //Get the number of fetures a zoom level can take in its category
     let featuresPerZoomLevel = Math.ceil(
       categoryLength / zoomLevelsPerCategory
     );
     let splitedArray = splitBy(featuresPerZoomLevel, category);
     let features = Object.assign({}, splitedArray);
     overlaysObj[categoryName] = {};
+    //iterate over the group of features of a category
     for (let i in features) {
-      layerZoom--;
       categoryArray = features[i];
       categoryLayerGroup = L.layerGroup(categoryArray);
       categoryLayerGroup.categoryName = `${categoryName}${i}`;
@@ -84,11 +85,10 @@ const loadGroupedLayers = () => {
       layersBasedOnZoom[layerZoom] = {};
       layersBasedOnZoom[layerZoom]["layer"] = categoryLayerGroup;
       // layersBasedOnZoom[layerZoom]["stack"] = () => {
-      //   cleanMap();
       //   mMap.addLayer(layersBasedOnZoom[layerZoom]["layer"]);
       // };
+      layerZoom--;
     }
-    console.log("ZOOMS =>", layersBasedOnZoom);
   }
   loadGroupedLayerControl();
 };
@@ -150,22 +150,28 @@ const handleOnEachFeature = (feature, layer) => {
   categories[category].push(layer);
 };
 
-const handleOnZoomEnd = event => {
+const handleOnZoomEnd = () => {
   let maxZoom = mMap.getMaxZoom();
   let currentZoom = mMap.getZoom();
   console.log(currentZoom);
-  for (let i = maxZoom - 2; i > 1; i--) {
+  for (let i = maxZoom; i > 0; i--) {
     // console.log("i", i);
     layersBasedOnZoom[i]["stack"] = () => {
       // cleanMap();
-      if (mMap.hasLayer(layersBasedOnZoom[i]["layer"])) {
-        mMap.removeLayer(layersBasedOnZoom[i]["layer"]);
-      } else {
+      console.log("current zoom", currentZoom);
+      // console.log("last zoom", lastZoom);
+      if (
+        // layersZoomStack.lastZoom < currentZoom &&
+        !mMap.hasLayer(layersBasedOnZoom[i]["layer"])
+      ) {
         mMap.addLayer(layersBasedOnZoom[i]["layer"]);
+      } else {
+        mMap.removeLayer(layersBasedOnZoom[i]["layer"]);
       }
     };
   }
-
+  console.log("ZOOMS =>", layersBasedOnZoom);
+  layersZoomStack.lastZoom = currentZoom;
   // console.log(layersBasedOnZoom);
   if (layersBasedOnZoom && layersBasedOnZoom[currentZoom]) {
     // console.log("tell me sir", layersBasedOnZoom);
@@ -196,7 +202,7 @@ const pointToLayer = (feature, latlng) => {
   </a></div>`;
   let mIcon, marker, tooltip;
   mIcon = L.divIcon({
-    iconSize: [8, 8],
+    iconSize: [10, 10],
     iconAnchor: [4, 4],
     html: ""
   });
@@ -207,7 +213,6 @@ const pointToLayer = (feature, latlng) => {
 
   marker.on("click", e => {
     // window.open(feature.properties.enlace, "_blank");
-
     marker.openTooltip();
   });
 
