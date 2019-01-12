@@ -30,7 +30,7 @@ $(document).ready(() => {
   mMap = L.map("mapid", MAP_OPTIONS);
   baseLayer = L.tileLayer(TILE_LAYER, {
     maxZoom: 12,
-    id: "mapbox.light",
+    id: "mapbox.streets",
     accessToken: TOKEN
   });
   if (L.Browser.touch) {
