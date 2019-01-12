@@ -5,8 +5,8 @@ const TOKEN =
 const URL = "https://www.todosurf.com/dev/config/classes/geojson.php";
 
 const BOUNDS = new L.LatLngBounds(
-  new L.LatLng(26.947964584439234, -18.859612147656208),
-  new L.LatLng(46.60176240818251, 5.8376534773437925)
+  new L.LatLng(26.947964584439234, -19.859612147656208),
+  new L.LatLng(46.60176240818251, 7.8376534773437925)
 );
 const MAP_OPTIONS = {
   center: BOUNDS.getCenter(),
@@ -58,13 +58,13 @@ const loadSurfingFeatures = async () => {
 
 const loadGroupedLayers = () => {
   let maxZoom = mMap.getMaxZoom();
-  let categoryName, categoryArray, categoryLayerGroup;
+  let categoryName;
   //Get the number of zoom levels a category can take
   let zoomLevelsPerCategory = Math.ceil(
     maxZoom / Object.keys(categories).length
   );
 
-  let layerZoom = maxZoom;
+  let layerZoom = 0;
   //iterate over the  categories (priorities)
   for (categoryName in categories) {
     let category = categories[categoryName];
@@ -78,16 +78,25 @@ const loadGroupedLayers = () => {
     overlaysObj[categoryName] = {};
     //iterate over the group of features of a category
     for (let i in features) {
+      let categoryLayerGroup, categoryArray;
+      layerZoom++;
       categoryArray = features[i];
       categoryLayerGroup = L.layerGroup(categoryArray);
       categoryLayerGroup.categoryName = `${categoryName}${i}`;
       overlaysObj[categoryName][`${categoryName}${i}`] = categoryLayerGroup;
       layersBasedOnZoom[layerZoom] = {};
       layersBasedOnZoom[layerZoom]["layer"] = categoryLayerGroup;
-      // layersBasedOnZoom[layerZoom]["stack"] = () => {
-      //   mMap.addLayer(layersBasedOnZoom[layerZoom]["layer"]);
-      // };
-      layerZoom--;
+      layersBasedOnZoom[layerZoom]["stack"] = () => {
+        mMap.eachLayer(layer => {
+          console.log("layer", layer);
+        });
+        let mGroup = categoryLayerGroup;
+        if (mMap.hasLayer(mGroup)) {
+          mMap.removeLayer(mGroup);
+        } else {
+          mMap.addLayer(mGroup);
+        }
+      };
     }
   }
   loadGroupedLayerControl();
@@ -151,25 +160,7 @@ const handleOnEachFeature = (feature, layer) => {
 };
 
 const handleOnZoomEnd = () => {
-  let maxZoom = mMap.getMaxZoom();
   let currentZoom = mMap.getZoom();
-  console.log(currentZoom);
-  for (let i = maxZoom; i > 0; i--) {
-    // console.log("i", i);
-    layersBasedOnZoom[i]["stack"] = () => {
-      // cleanMap();
-      console.log("current zoom", currentZoom);
-      // console.log("last zoom", lastZoom);
-      if (
-        // layersZoomStack.lastZoom < currentZoom &&
-        !mMap.hasLayer(layersBasedOnZoom[i]["layer"])
-      ) {
-        mMap.addLayer(layersBasedOnZoom[i]["layer"]);
-      } else {
-        mMap.removeLayer(layersBasedOnZoom[i]["layer"]);
-      }
-    };
-  }
   console.log("ZOOMS =>", layersBasedOnZoom);
   layersZoomStack.lastZoom = currentZoom;
   // console.log(layersBasedOnZoom);
@@ -191,18 +182,16 @@ const handleOnSearch = e => {
   let { marker } = e.params.data;
   mMap.addLayer(marker);
   mMap.setView(marker.getLatLng(), 8);
-  marker.openTooltip();
+  marker.openPopup();
 };
 
 // ************************ END EVENT HANDLERS ******************
 
 const pointToLayer = (feature, latlng) => {
-  let text = `<div ><a target="_blank" href="${feature.properties.enlace}" > 
-  ${feature.properties.nombre} 
-  </a></div>`;
-  let mIcon, marker, tooltip;
+  let text = getTooltipHtmlContent(feature);
+  let mIcon, marker, popup;
   mIcon = L.divIcon({
-    iconSize: [10, 10],
+    iconSize: [12, 12],
     iconAnchor: [4, 4],
     html: ""
   });
@@ -211,9 +200,18 @@ const pointToLayer = (feature, latlng) => {
     icon: mIcon
   });
 
-  marker.on("click", e => {
-    // window.open(feature.properties.enlace, "_blank");
-    marker.openTooltip();
+  marker.on("click", function(e) {
+    this.closePopup();
+    this.openPopup();
+  });
+
+  marker.on("mouseover", function(e) {
+    this.openPopup();
+  });
+  marker.on("mouseout", function(e) {
+    setTimeout(() => {
+      this.closePopup();
+    }, 1500);
   });
 
   autoCompleteData.push({
@@ -223,13 +221,16 @@ const pointToLayer = (feature, latlng) => {
   });
 
   markers.addLayer(marker);
-  tooltip = marker.bindTooltip(text, {
-    direction: "top",
-    permanent: false,
-    interactive: true
+  popup = marker.bindPopup(text, {
+    closeButton: false,
+    // direction: "top",
+    // permanent: false,
+    // interactive: true,
+    // maxWidth: "500",
+    className: "custom"
   });
 
-  return tooltip;
+  return popup;
 };
 
 const cleanMap = () => {
@@ -254,6 +255,22 @@ const splitBy = (n, a) => {
     }
     return acc;
   }, []);
+};
+
+const getTooltipHtmlContent = feature => {
+  let { altura, enlace, nombre } = feature.properties;
+  let text = `
+    <div class="wave-score">
+      <span>${altura} </span>
+    </div>
+    <div class="wave-link" >
+      <a 
+      href="${enlace}"
+      target="_blank" >
+        ${nombre} 
+      </a>
+    </div>`;
+  return text;
 };
 
 const getControlHtmlContent = () => {
