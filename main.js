@@ -1,3 +1,4 @@
+// ************************ APP STATE ******************
 const TILE_LAYER =
   "https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}";
 const TOKEN =
@@ -24,6 +25,7 @@ let baseLayer = null;
 let layersZoomStack = { lastZoom: undefined, stack: [] };
 let markers = new L.layerGroup();
 let autoCompleteData = [];
+// ************************ END APP STATE ******************
 
 // ************************ MAIN ******************
 $(document).ready(() => {
@@ -124,7 +126,7 @@ const loadGroupedLayerControl = () => {
 const loadSearchControl = () => {
   let SearchBox = L.Control.extend({
     options: { position: "topleft" },
-    onAdd: handleOnAdd
+    onAdd: handleOnAddSearchControl
   });
   new SearchBox().addTo(mMap);
   loadAutocomplte();
@@ -136,9 +138,9 @@ const loadAutocomplte = () => {
   let data = autoCompleteData;
   $.fn.select2.defaults.set("theme", "bootstrap");
   $("#search-box").select2({
-    placeholder: "Selecciona una playa",
     data,
-    width: "80%"
+    width: "80%",
+    placeholder: "Selecciona una playa"
   });
 
   $("#search-box").on("select2:select", handleOnSearch);
@@ -170,7 +172,7 @@ const handleOnZoomEnd = () => {
   }
 };
 
-const handleOnAdd = () => {
+const handleOnAddSearchControl = () => {
   let container = L.DomUtil.create("div");
   container.id = "controlcontainer";
   $(container).html(getControlHtmlContent());
@@ -216,17 +218,13 @@ const pointToLayer = (feature, latlng) => {
 
   autoCompleteData.push({
     id: feature.id,
-    text: feature.properties.nombre,
+    text: feature.properties.nombre_busqueda,
     marker: marker
   });
 
   markers.addLayer(marker);
   popup = marker.bindPopup(text, {
     closeButton: false,
-    // direction: "top",
-    // permanent: false,
-    // interactive: true,
-    // maxWidth: "500",
     className: "custom"
   });
 

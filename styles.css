@@ -3,36 +3,31 @@
   background: #a9a9a9;
 }
 .custom .leaflet-popup-content-wrapper {
-  background: #a9a9a9;
   color: #ffffff;
+  background: #a9a9a9;
 }
 .custom .leaflet-popup-content {
-  background: #a9a9a9;
-  color: #ffffff;
-  display: flex;
   flex: 1;
+  display: flex;
   margin: 6px;
-  /* margin: 4% 10% 4% 0%; */
-
   max-width: 150px;
   min-width: 100px;
+  background: #a9a9a9;
 }
 
 .wave-score {
-  margin: -4% 2% -4% -4%;
-  text-align: center;
-  min-width: 50px;
   color: white;
-  padding-top: 5%;
-  padding-bottom: 5%;
-  padding-left: 2%;
+  padding: 5% 2%;
+  min-width: 50px;
+  text-align: center;
+  border-radius: 10%;
+  margin: -4% 2% -4% -4%;
   background-color: #f79429;
-  border-radius: 10%
 }
 
 .wave-score > span {
-  position: relative;
   top: 15%; 
+  position: relative;
   line-height: normal;
   font-size: 1.4em;
 }
@@ -50,23 +45,23 @@
   position: fixed;
   left: 20%;
   top: 10px;
+  width: 50%;
   margin-top: -50px;
   margin: 0 auto;
-  width: 50%;
   transition: left 0.5s;
   -webkit-transform: translateX(0);
   transform: translateX(0);
-  transition-property: -webkit-transform, transform, visibility, opacity;
   transition-duration: 0.2s;
+  transition-property: -webkit-transform, transform, visibility, opacity;
   transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
 }
 #controlcontainer {
   top: 0;
-  position: absolute;
-  z-index: 4;
-  margin: 0 !important;
   bottom: 0;
+  z-index: 4;
   height: 100%;
+  position: absolute;
+  margin: 0 !important;
 }
 .leaflet-div-icon {
   background: #a8a8a8;
@@ -76,10 +71,10 @@
   height: 40px;
   width: 40px;
   float: right;
-  justify-content: center;
-  align-items: center;
-  border-radius: 50%;
   color: #f89c29;
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
 }
 @media (min-width: 992px) {
   #controlbox {
