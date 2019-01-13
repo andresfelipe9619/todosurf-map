@@ -26,7 +26,7 @@ let categories = {};
 let overlaysObj = {};
 let layersBasedOnZoom = {};
 let baseLayer = null;
-let layersZoomStack = { lastZoom: undefined, stack: [] };
+let lastZoom = 0;
 let markers = new L.layerGroup();
 let autoCompleteData = [];
 // ************************ END APP STATE ******************
@@ -45,6 +45,7 @@ $(document).ready(() => {
   baseLayer.addTo(mMap);
   loadSurfingFeatures();
   mMap.on("zoomend", handleOnZoomEnd);
+  mMap.on("zoomstart", handleOnZoomStart);
 });
 // ************************ END MAIN ******************
 
@@ -143,25 +144,31 @@ const loadAutocomplte = () => {
 };
 
 const loadLayerBaesedOnZoom = () => {
-  let zoomCount = MAX_ZOOM - INITIAL_ZOOM;
+  let zoomCount = MAX_ZOOM;
 
   for (let i in overlaysObj) {
     for (let j in overlaysObj[i]) {
-      console.log(`zoom lvl=${zoomCount} HAS subcategory=${i}-${j}`);
+      console.log(`Zoom lvl=${zoomCount} HAS subcategory=${i}-${j}`);
       let z = zoomCount;
       let layer = overlaysObj[i][j];
       layersBasedOnZoom[zoomCount] = {};
       layersBasedOnZoom[zoomCount]["layer"] = layer;
       layersBasedOnZoom[zoomCount]["stack"] = () => {
         if (mMap.hasLayer(layer)) {
-          console.log(`in zoom lvl ${z} MAP REMOVES subcategory`, layer.categoryName);
+          console.log(
+            `On zoom lvl ${z} MAP REMOVES subcategory`,
+            layer.categoryName
+          );
           mMap.removeLayer(layer);
         } else if (!mMap.hasLayer(layer)) {
-          console.log(`in zoom lvl ${z} MAP ADD subcategory`, layer.categoryName);
+          console.log(
+            `On zoom lvl ${z} MAP ADD subcategory`,
+            layer.categoryName
+          );
           mMap.addLayer(layer);
         }
       };
-      zoomCount--;
+      if (INITIAL_ZOOM <= zoomCount) zoomCount--;
     }
   }
 };
@@ -177,15 +184,25 @@ const handleOnEachFeature = (feature, layer) => {
   }
   categories[category].push(layer);
 };
-
-const handleOnZoomEnd = (e) => {
-  console.log('event', e);
+const handleOnZoomStart = e => {
   let currentZoom = mMap.getZoom();
-  layersZoomStack.lastZoom = currentZoom;
-  console.log('CURRENT', currentZoom)
+  lastZoom = currentZoom;
+}
 
-  console.log('LAYERS ON ZOOM', layersBasedOnZoom)
-  if (layersBasedOnZoom && layersBasedOnZoom[currentZoom] !== 'undefined') {
+const handleOnZoomEnd = e => {
+  let currentZoom = mMap.getZoom();
+  console.log(
+    `Current zoom ${currentZoom} CALLS TO`,
+    layersBasedOnZoom[currentZoom]
+      ? layersBasedOnZoom[currentZoom].layer.categoryName
+      : "NO ONE"
+  );
+  // console.log("LAYERS ON ZOOM", layersBasedOnZoom);
+  if (
+    layersBasedOnZoom &&
+    layersBasedOnZoom[currentZoom] &&
+    layersBasedOnZoom[currentZoom]["stack"]
+  ) {
     layersBasedOnZoom[currentZoom]["stack"]();
   }
 };
@@ -249,18 +266,8 @@ const pointToLayer = (feature, latlng) => {
   return popup;
 };
 
-const cleanMap = () => {
-  // mMap.removeLayer(overlaysObj["0"])
-  // overlaysObj["0"].length = 0;
-  mMap.eachLayer(layer => {
-    if (layer instanceof L.layerGroup) {
-      console.log("layer", Object.getPrototypeOf(layer));
-      //Do marker specific actions here
-
-      mMap.removeLayer(layer);
-      layer.length = 0;
-    }
-  });
+const cleanMap = (zoom) => {
+  
 };
 
 //Just split and Array in N parts
