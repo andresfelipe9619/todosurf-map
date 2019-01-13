@@ -3,6 +3,13 @@
   background: #a8a8a8;
   border-radius: 50%;
 }
+.star {
+  background: #b3d614;
+  border-radius: 50%;
+  border-color: #647906;
+  border-width: 1px;
+  border-style: solid;
+}
 
 .custom .leaflet-popup-tip {
   background: #a9a9a9;
@@ -31,7 +38,7 @@
 }
 
 .wave-score > span {
-  top: 15%; 
+  top: 15%;
   position: relative;
   line-height: normal;
   font-size: 1.4em;

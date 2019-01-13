@@ -244,11 +244,25 @@ const handleOnSearch = e => {
 const pointToLayer = (feature, latlng) => {
   let text = getPopupHtmlContent(feature);
   let mIcon, marker, popup;
-  mIcon = L.divIcon({
-    iconSize: [15, 15],
-    iconAnchor: [4, 4],
-    html: ""
-  });
+  let isVisible = feature.properties.visible
+
+  if(isVisible){
+    mIcon = L.divIcon({
+      className: "star",
+      iconSize: [15, 15],
+      iconAnchor: [4, 4],
+      html: ""
+    });  
+    console.log('YES')
+  }else{
+    mIcon = L.divIcon({
+      iconSize: [15, 15],
+      iconAnchor: [4, 4],
+      html: ""
+    });  
+    console.log('NOT')
+
+  }
 
   marker = L.marker(latlng, {
     icon: mIcon
