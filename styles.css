@@ -1,4 +1,9 @@
-/*TOOLTIP STYLES*/
+/*POPUP STYLES*/
+.leaflet-div-icon {
+  background: #a8a8a8;
+  border-radius: 50%;
+}
+
 .custom .leaflet-popup-tip {
   background: #a9a9a9;
 }
@@ -63,10 +68,7 @@
   position: absolute;
   margin: 0 !important;
 }
-.leaflet-div-icon {
-  background: #a8a8a8;
-  border-radius: 50%;
-}
+
 .search-icon {
   height: 40px;
   width: 40px;

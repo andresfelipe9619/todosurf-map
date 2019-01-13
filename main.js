@@ -9,12 +9,16 @@ const BOUNDS = new L.LatLngBounds(
   new L.LatLng(26.947964584439234, -19.859612147656208),
   new L.LatLng(46.60176240818251, 7.8376534773437925)
 );
+const VISCOSITY = 1;
+const MAX_ZOOM = 12;
+const INITIAL_ZOOM = 3;
+
 const MAP_OPTIONS = {
   center: BOUNDS.getCenter(),
-  zoom: 3,
-  maxZoom: 12,
+  zoom: INITIAL_ZOOM,
+  maxZoom: MAX_ZOOM,
   maxBounds: BOUNDS,
-  maxBoundsViscosity: 1
+  maxBoundsViscosity: VISCOSITY
 };
 
 let mMap = null;
@@ -59,14 +63,12 @@ const loadSurfingFeatures = async () => {
 };
 
 const loadGroupedLayers = () => {
-  let maxZoom = mMap.getMaxZoom();
   let categoryName;
   //Get the number of zoom levels a category can take
   let zoomLevelsPerCategory = Math.ceil(
-    maxZoom / Object.keys(categories).length
+    (MAX_ZOOM - INITIAL_ZOOM) / Object.keys(categories).length
   );
 
-  let layerZoom = 0;
   //iterate over the  categories (priorities)
   for (categoryName in categories) {
     let category = categories[categoryName];
@@ -76,32 +78,23 @@ const loadGroupedLayers = () => {
       categoryLength / zoomLevelsPerCategory
     );
     let splitedArray = splitBy(featuresPerZoomLevel, category);
+    console.log(
+      `[${categoryName}] ZOOM LVLS X CATEFORY=${zoomLevelsPerCategory} & FEATURES X ZOOM LVL=${featuresPerZoomLevel}`
+    );
     let features = Object.assign({}, splitedArray);
+
     overlaysObj[categoryName] = {};
     //iterate over the group of features of a category
     for (let i in features) {
       let categoryLayerGroup, categoryArray;
-      layerZoom++;
       categoryArray = features[i];
       categoryLayerGroup = L.layerGroup(categoryArray);
       categoryLayerGroup.categoryName = `${categoryName}${i}`;
       overlaysObj[categoryName][`${categoryName}${i}`] = categoryLayerGroup;
-      layersBasedOnZoom[layerZoom] = {};
-      layersBasedOnZoom[layerZoom]["layer"] = categoryLayerGroup;
-      layersBasedOnZoom[layerZoom]["stack"] = () => {
-        mMap.eachLayer(layer => {
-          console.log("layer", layer);
-        });
-        let mGroup = categoryLayerGroup;
-        if (mMap.hasLayer(mGroup)) {
-          mMap.removeLayer(mGroup);
-        } else {
-          mMap.addLayer(mGroup);
-        }
-      };
     }
   }
   loadGroupedLayerControl();
+  loadLayerBaesedOnZoom();
 };
 
 //Initialize grouped layers control
@@ -149,6 +142,30 @@ const loadAutocomplte = () => {
   });
 };
 
+const loadLayerBaesedOnZoom = () => {
+  let zoomCount = MAX_ZOOM - INITIAL_ZOOM;
+
+  for (let i in overlaysObj) {
+    for (let j in overlaysObj[i]) {
+      console.log(`zoom lvl=${zoomCount} HAS subcategory=${i}-${j}`);
+      let z = zoomCount;
+      let layer = overlaysObj[i][j];
+      layersBasedOnZoom[zoomCount] = {};
+      layersBasedOnZoom[zoomCount]["layer"] = layer;
+      layersBasedOnZoom[zoomCount]["stack"] = () => {
+        if (mMap.hasLayer(layer)) {
+          console.log(`in zoom lvl ${z} MAP REMOVES subcategory`, layer.categoryName);
+          mMap.removeLayer(layer);
+        } else if (!mMap.hasLayer(layer)) {
+          console.log(`in zoom lvl ${z} MAP ADD subcategory`, layer.categoryName);
+          mMap.addLayer(layer);
+        }
+      };
+      zoomCount--;
+    }
+  }
+};
+
 // ************************ END COMMAND FUNCTIONS ******************
 
 // ************************ EVENT HANDLERS ******************
@@ -161,13 +178,14 @@ const handleOnEachFeature = (feature, layer) => {
   categories[category].push(layer);
 };
 
-const handleOnZoomEnd = () => {
+const handleOnZoomEnd = (e) => {
+  console.log('event', e);
   let currentZoom = mMap.getZoom();
-  console.log("ZOOMS =>", layersBasedOnZoom);
   layersZoomStack.lastZoom = currentZoom;
-  // console.log(layersBasedOnZoom);
-  if (layersBasedOnZoom && layersBasedOnZoom[currentZoom]) {
-    // console.log("tell me sir", layersBasedOnZoom);
+  console.log('CURRENT', currentZoom)
+
+  console.log('LAYERS ON ZOOM', layersBasedOnZoom)
+  if (layersBasedOnZoom && layersBasedOnZoom[currentZoom] !== 'undefined') {
     layersBasedOnZoom[currentZoom]["stack"]();
   }
 };
