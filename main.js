@@ -22,7 +22,11 @@ const MAP_OPTIONS = {
 };
 
 let mMap = null;
-let categories = {};
+let categories = {
+  visible: [],
+  priorities: {}
+};
+
 let overlaysObj = {};
 let layersBasedOnZoom = {};
 let baseLayer = null;
@@ -39,9 +43,7 @@ $(document).ready(() => {
     id: "mapbox.streets",
     accessToken: TOKEN
   });
-  if (L.Browser.touch) {
-    L.control.touchHover().addTo(mMap);
-  }
+
   baseLayer.addTo(mMap);
   loadSurfingFeatures();
   mMap.on("zoomend", handleOnZoomEnd);
@@ -66,13 +68,19 @@ const loadSurfingFeatures = async () => {
 const loadGroupedLayers = () => {
   let categoryName;
   //Get the number of zoom levels a category can take
+  console.log("MY CATEGORIES", categories);
   let zoomLevelsPerCategory = Math.ceil(
-    (MAX_ZOOM - INITIAL_ZOOM) / Object.keys(categories).length
+    (MAX_ZOOM - INITIAL_ZOOM) / Object.keys(categories.priorities).length
   );
+  overlaysObj.priority = {};
+  overlaysObj.visible = L.layerGroup(categories.visible);
+  mMap.addLayer(overlaysObj.visible);
+  overlaysObj.visible.eachLayer(marker => marker.openPopup());
 
-  //iterate over the  categories (priorities)
-  for (categoryName in categories) {
-    let category = categories[categoryName];
+  // overlaysObj.visible.openPopup()
+  //iterate over the  categories.priorities (priorities)
+  for (categoryName in categories.priorities) {
+    let category = categories.priorities[categoryName];
     let categoryLength = category.length;
     //Get the number of fetures a zoom level can take in its category
     let featuresPerZoomLevel = Math.ceil(
@@ -84,14 +92,17 @@ const loadGroupedLayers = () => {
     );
     let features = Object.assign({}, splitedArray);
 
-    overlaysObj[categoryName] = {};
+    overlaysObj.priority[categoryName] = {};
+
     //iterate over the group of features of a category
     for (let i in features) {
       let categoryLayerGroup, categoryArray;
       categoryArray = features[i];
       categoryLayerGroup = L.layerGroup(categoryArray);
-      categoryLayerGroup.categoryName = `${categoryName}${i}`;
-      overlaysObj[categoryName][`${categoryName}${i}`] = categoryLayerGroup;
+      categoryLayerGroup.categoryName = `${categoryName}-${i}`;
+      overlaysObj.priority[categoryName][
+        `${categoryName}-${i}`
+      ] = categoryLayerGroup;
     }
   }
   loadGroupedLayerControl();
@@ -101,12 +112,14 @@ const loadGroupedLayers = () => {
 //Initialize grouped layers control
 const loadGroupedLayerControl = () => {
   let priority = {};
-  for (let i in overlaysObj) {
-    for (let j in overlaysObj[i]) {
-      priority[j] = overlaysObj[i][j];
+  let visible = overlaysObj.visible;
+  for (let i in overlaysObj.priority) {
+    for (let j in overlaysObj.priority[i]) {
+      priority[j] = overlaysObj.priority[i][j];
     }
   }
   let groupedOverlays = {
+    Visible: { "1": visible },
     Prioridades: priority
   };
   let mapabase = {
@@ -146,11 +159,11 @@ const loadAutocomplte = () => {
 const loadLayerBaesedOnZoom = () => {
   let zoomCount = MAX_ZOOM;
 
-  for (let i in overlaysObj) {
-    for (let j in overlaysObj[i]) {
+  for (let i in overlaysObj.priority) {
+    for (let j in overlaysObj.priority[i]) {
       console.log(`Zoom lvl=${zoomCount} HAS subcategory=${i}-${j}`);
       let z = zoomCount;
-      let layer = overlaysObj[i][j];
+      let layer = overlaysObj.priority[i][j];
       layersBasedOnZoom[zoomCount] = {};
       layersBasedOnZoom[zoomCount]["layer"] = layer;
       layersBasedOnZoom[zoomCount]["stack"] = () => {
@@ -178,16 +191,20 @@ const loadLayerBaesedOnZoom = () => {
 // ************************ EVENT HANDLERS ******************
 
 const handleOnEachFeature = (feature, layer) => {
-  let category = feature.properties.prioridad;
-  if (typeof categories[category] === "undefined") {
-    categories[category] = [];
+  let { prioridad, visible } = feature.properties;
+  if (visible && visible === 1) {
+    categories.visible.push(layer);
+  } else {
+    if (typeof categories.priorities[prioridad] === "undefined") {
+      categories.priorities[prioridad] = [];
+    }
+    categories.priorities[prioridad].push(layer);
   }
-  categories[category].push(layer);
 };
 const handleOnZoomStart = e => {
   let currentZoom = mMap.getZoom();
   lastZoom = currentZoom;
-}
+};
 
 const handleOnZoomEnd = e => {
   let currentZoom = mMap.getZoom();
@@ -225,30 +242,16 @@ const handleOnSearch = e => {
 // ************************ END EVENT HANDLERS ******************
 
 const pointToLayer = (feature, latlng) => {
-  let text = getTooltipHtmlContent(feature);
+  let text = getPopupHtmlContent(feature);
   let mIcon, marker, popup;
   mIcon = L.divIcon({
-    iconSize: [12, 12],
+    iconSize: [15, 15],
     iconAnchor: [4, 4],
     html: ""
   });
 
   marker = L.marker(latlng, {
     icon: mIcon
-  });
-
-  marker.on("click", function(e) {
-    this.closePopup();
-    this.openPopup();
-  });
-
-  marker.on("mouseover", function(e) {
-    this.openPopup();
-  });
-  marker.on("mouseout", function(e) {
-    setTimeout(() => {
-      this.closePopup();
-    }, 1500);
   });
 
   autoCompleteData.push({
@@ -266,9 +269,7 @@ const pointToLayer = (feature, latlng) => {
   return popup;
 };
 
-const cleanMap = (zoom) => {
-  
-};
+const cleanMap = zoom => {};
 
 //Just split and Array in N parts
 const splitBy = (n, a) => {
@@ -280,7 +281,7 @@ const splitBy = (n, a) => {
   }, []);
 };
 
-const getTooltipHtmlContent = feature => {
+const getPopupHtmlContent = feature => {
   let { altura, enlace, nombre } = feature.properties;
   let text = `
     <div class="wave-score">
