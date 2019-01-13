@@ -1,6 +1,6 @@
 // ************************ APP STATE ******************
 const TILE_LAYER =
-  "https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}";
+  "https://api.mapbox.com/styles/v1/andres9619/cjquv33rc24fi2smkw3z1e2j0/tiles/256/{z}/{x}/{y}?access_token={accessToken}";
 const TOKEN =
   "pk.eyJ1IjoiYW5kcmVzOTYxOSIsImEiOiJjanExdTFodjMwYXQyNDNuMmVvazV6eHBlIn0.kOpHKEx5EBGD8YIXmKRQWA";
 const URL = "https://www.todosurf.com/dev/config/classes/geojson.php";
