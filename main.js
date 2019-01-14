@@ -1,4 +1,5 @@
 // ************************ APP STATE ******************
+//CONSTANTS
 const TILE_LAYER =
   "https://api.mapbox.com/styles/v1/andres9619/cjquv33rc24fi2smkw3z1e2j0/tiles/256/{z}/{x}/{y}?access_token={accessToken}";
 const TOKEN =
@@ -10,7 +11,7 @@ const BOUNDS = new L.LatLngBounds(
   new L.LatLng(46.60176240818251, 7.8376534773437925)
 );
 const VISCOSITY = 1;
-const MAX_ZOOM = 12;
+const MAX_ZOOM = 9;
 const INITIAL_ZOOM = 3;
 
 const MAP_OPTIONS = {
@@ -20,18 +21,18 @@ const MAP_OPTIONS = {
   maxBounds: BOUNDS,
   maxBoundsViscosity: VISCOSITY
 };
-
+//VARIABLES
 let mMap = null;
 let categories = {
   visible: [],
   priorities: {}
 };
-
 let overlaysObj = {};
 let layersBasedOnZoom = {};
 let baseLayer = null;
-let lastZoom = 0;
-let markers = new L.layerGroup();
+let zoomEnd = -1;
+let zoomStart = -1;
+let visiblePopups = new L.layerGroup();
 let autoCompleteData = [];
 // ************************ END APP STATE ******************
 
@@ -39,7 +40,7 @@ let autoCompleteData = [];
 $(document).ready(() => {
   mMap = L.map("mapid", MAP_OPTIONS);
   baseLayer = L.tileLayer(TILE_LAYER, {
-    maxZoom: 12,
+    maxZoom: MAX_ZOOM,
     id: "mapbox.streets",
     accessToken: TOKEN
   });
@@ -68,7 +69,7 @@ const loadSurfingFeatures = async () => {
 const loadGroupedLayers = () => {
   let categoryName;
   //Get the number of zoom levels a category can take
-  console.log("MY CATEGORIES", categories);
+  // console.log("My CATEGORIES", categories);
   let zoomLevelsPerCategory = Math.ceil(
     (MAX_ZOOM - INITIAL_ZOOM) / Object.keys(categories.priorities).length
   );
@@ -166,24 +167,11 @@ const loadLayerBaesedOnZoom = () => {
       let layer = overlaysObj.priority[i][j];
       layersBasedOnZoom[zoomCount] = {};
       layersBasedOnZoom[zoomCount]["layer"] = layer;
-      layersBasedOnZoom[zoomCount]["stack"] = () => {
-        if (mMap.hasLayer(layer)) {
-          console.log(
-            `On zoom lvl ${z} MAP REMOVES subcategory`,
-            layer.categoryName
-          );
-          mMap.removeLayer(layer);
-        } else if (!mMap.hasLayer(layer)) {
-          console.log(
-            `On zoom lvl ${z} MAP ADD subcategory`,
-            layer.categoryName
-          );
-          mMap.addLayer(layer);
-        }
-      };
       if (INITIAL_ZOOM <= zoomCount) zoomCount--;
     }
   }
+  console.log("My Overlays", overlaysObj);
+  console.log("My Layers based on zoom", layersBasedOnZoom);
 };
 
 // ************************ END COMMAND FUNCTIONS ******************
@@ -203,24 +191,27 @@ const handleOnEachFeature = (feature, layer) => {
 };
 const handleOnZoomStart = e => {
   let currentZoom = mMap.getZoom();
-  lastZoom = currentZoom;
+  zoomStart = currentZoom;
 };
 
 const handleOnZoomEnd = e => {
   let currentZoom = mMap.getZoom();
-  console.log(
-    `Current zoom ${currentZoom} CALLS TO`,
-    layersBasedOnZoom[currentZoom]
-      ? layersBasedOnZoom[currentZoom].layer.categoryName
-      : "NO ONE"
-  );
-  // console.log("LAYERS ON ZOOM", layersBasedOnZoom);
-  if (
-    layersBasedOnZoom &&
-    layersBasedOnZoom[currentZoom] &&
-    layersBasedOnZoom[currentZoom]["stack"]
-  ) {
-    layersBasedOnZoom[currentZoom]["stack"]();
+  let zoomEnd = currentZoom;
+  if (zoomStart <= INITIAL_ZOOM || zoomEnd <= INITIAL_ZOOM) return;
+
+  //ZOOM IN
+  if (zoomStart > zoomEnd) {
+    for (let i = zoomStart; i >= zoomEnd; i--) {
+      console.log(`zoomStart ${i} TO zoomEnd ${zoomEnd}`);
+      mMap.removeLayer(layersBasedOnZoom[i]["layer"]);
+    }
+  }
+  //ZOOM OUT
+  else if (zoomStart < zoomEnd) {
+    for (let j = zoomStart; j <= zoomEnd; j++) {
+      console.log(`zoomStart ${j} TO zoomEnd ${zoomEnd}`);
+      mMap.addLayer(layersBasedOnZoom[j]["layer"]);
+    }
   }
 };
 
@@ -244,29 +235,39 @@ const handleOnSearch = e => {
 const pointToLayer = (feature, latlng) => {
   let text = getPopupHtmlContent(feature);
   let mIcon, marker, popup;
-  let isVisible = feature.properties.visible
-
-  if(isVisible){
-    mIcon = L.divIcon({
-      className: "star",
-      iconSize: [15, 15],
-      iconAnchor: [4, 4],
-      html: ""
-    });  
-    console.log('YES')
-  }else{
-    mIcon = L.divIcon({
-      iconSize: [15, 15],
-      iconAnchor: [4, 4],
-      html: ""
-    });  
-    console.log('NOT')
-
+  let isVisible = feature.properties.visible;
+  let iconOptions = {
+    iconSize: [20, 20],
+    iconAnchor: [4, 4],
+    html: ""
+  };
+  let popupOptions = {
+    closeButton: false,
+    className: "custom",
+    autoClose: true
+  };
+  if (isVisible) {
+    mIcon = L.divIcon({ ...iconOptions, className: "star" });
+  } else {
+    mIcon = L.divIcon(iconOptions);
   }
 
   marker = L.marker(latlng, {
     icon: mIcon
   });
+
+  if (!L.mobile) {
+    marker.on("mouseover", function(e) {
+      e.target.openPopup();
+    });
+    if (isVisible) {
+      popup = marker.bindPopup(text, { ...popupOptions, autoClose: false });
+    } else {
+      popup = marker.bindPopup(text, popupOptions);
+    }
+  } else {
+    popup = marker.bindPopup(text, popupOptions);
+  }
 
   autoCompleteData.push({
     id: feature.id,
@@ -274,16 +275,8 @@ const pointToLayer = (feature, latlng) => {
     marker: marker
   });
 
-  markers.addLayer(marker);
-  popup = marker.bindPopup(text, {
-    closeButton: false,
-    className: "custom"
-  });
-
   return popup;
 };
-
-const cleanMap = zoom => {};
 
 //Just split and Array in N parts
 const splitBy = (n, a) => {
@@ -303,8 +296,7 @@ const getPopupHtmlContent = feature => {
     </div>
     <div class="wave-link" >
       <a 
-      href="${enlace}"
-      target="_blank" >
+      href="${enlace}" >
         ${nombre} 
       </a>
     </div>`;

@@ -75,6 +75,9 @@
   position: absolute;
   margin: 0 !important;
 }
+#btn-search{
+  height: 36px;
+}
 
 .search-icon {
   height: 40px;
@@ -95,5 +98,11 @@
   #controlbox {
     left: 20%;
     width: 60%;
+  }
+}
+@media (max-width: 340px) {
+  #controlbox {
+    left: 14%;
+    width: 70%;
   }
 }
