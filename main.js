@@ -54,13 +54,13 @@ $(document).ready(() => {
 
 // ************************ COMMAND FUNCTIONS ******************
 const loadSurfingFeatures = async () => {
-  // let result = await fetch(URL);
-  // let data = await result.json();
-  let data = GEO_JSON;
-  let layers = new L.GeoJSON(data, {
+  let result = await fetch(URL);
+  let data = await result.json();
+  // let data = GEO_JSON;
+   new L.GeoJSON(data, {
     pointToLayer,
     onEachFeature: handleOnEachFeature
-  });
+  })();
 
   loadSearchControl();
   loadGroupedLayers();
