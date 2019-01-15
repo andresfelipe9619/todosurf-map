@@ -10,12 +10,13 @@ const BOUNDS = new L.LatLngBounds(
   new L.LatLng(46.60176240818251, 7.8376534773437925)
 );
 const VISCOSITY = 1;
-const MAX_ZOOM_MAP = 12;
-const INITIAL_ZOOM = 3;
-const MAX_ZOOM_MARKERS = MAX_ZOOM_MAP - 3;
+const MAX_ZOOM_MAP = 14;
+const INITIAL_ZOOM = 4;
+const MAX_ZOOM_MARKERS = MAX_ZOOM_MAP - 4;
 const MAP_OPTIONS = {
-  center: BOUNDS.getCenter(),
   zoom: INITIAL_ZOOM,
+  center: BOUNDS.getCenter(),
+  minZoom: INITIAL_ZOOM,
   maxZoom: MAX_ZOOM_MAP,
   maxBounds: BOUNDS,
   maxBoundsViscosity: VISCOSITY
@@ -84,7 +85,7 @@ const loadGroupedLayers = () => {
   for (categoryName in categories.priorities) {
     let category = categories.priorities[categoryName];
     let categoryLength = category.length;
-    //Get the number of fetures a zoom level can take in its category
+    //Get the number of fetures a zoom level can show from the current category
     let featuresPerZoomLevel = Math.ceil(
       categoryLength / zoomLevelsPerCategory
     );
@@ -107,7 +108,8 @@ const loadGroupedLayers = () => {
       ] = categoryLayerGroup;
     }
   }
-  loadGroupedLayerControl();
+  //I will comment it, but it wiil help later with some debugging
+  // loadGroupedLayerControl();
   loadLayerBaesedOnZoom();
 };
 
@@ -262,20 +264,17 @@ const pointToLayer = (feature, latlng) => {
 
   if (!isMobileDevice()) {
     marker.on("mouseover", () => {
+      overlaysObj.visible.eachLayer(marker => marker.closePopup());
       marker.openPopup();
     });
     marker.on("click", () => {
       window.open(enlace, "_self");
     });
-    popup = visible
-      ? marker.bindPopup(text, { ...popupOptions, autoClose: false })
-      : marker.bindPopup(text, popupOptions);
-  } else {
-    popup = visible
-      ? marker.bindPopup(text, { ...popupOptions, autoClose: false })
-      : marker.bindPopup(text, popupOptions);
   }
-
+  popup = visible
+    ? marker.bindPopup(text, { ...popupOptions, autoClose: false })
+    : marker.bindPopup(text, popupOptions);
+    
   autoCompleteData.push({
     id: feature.id,
     text: feature.properties.nombre_busqueda,
