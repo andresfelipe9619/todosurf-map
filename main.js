@@ -271,7 +271,9 @@ const pointToLayer = (feature, latlng) => {
       ? marker.bindPopup(text, { ...popupOptions, autoClose: false })
       : marker.bindPopup(text, popupOptions);
   } else {
-    popup = marker.bindPopup(text, popupOptions);
+    popup = visible
+      ? marker.bindPopup(text, { ...popupOptions, autoClose: false })
+      : marker.bindPopup(text, popupOptions);
   }
 
   autoCompleteData.push({
@@ -294,7 +296,10 @@ const splitBy = (n, a) => {
 };
 
 const isMobileDevice = () => {
-  return (typeof window.orientation !== "undefined") || (navigator.userAgent.indexOf('IEMobile') !== -1);
+  return (
+    typeof window.orientation !== "undefined" ||
+    navigator.userAgent.indexOf("IEMobile") !== -1
+  );
 };
 
 const getPopupHtmlContent = feature => {
