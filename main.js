@@ -1,9 +1,8 @@
 // ************************ APP STATE ******************
 //CONSTANTS
 const TILE_LAYER =
-  "https://api.mapbox.com/styles/v1/andres9619/cjquv33rc24fi2smkw3z1e2j0/tiles/256/{z}/{x}/{y}?access_token={accessToken}";
-const TOKEN =
-  "pk.eyJ1IjoiYW5kcmVzOTYxOSIsImEiOiJjanExdTFodjMwYXQyNDNuMmVvazV6eHBlIn0.kOpHKEx5EBGD8YIXmKRQWA";
+  "https://stamen-tiles-{s}.a.ssl.fastly.net/watercolor/{z}/{x}/{y}.{ext}";
+
 const URL = "https://www.todosurf.com/dev/config/classes/geojson.php";
 
 const BOUNDS = new L.LatLngBounds(
@@ -11,13 +10,13 @@ const BOUNDS = new L.LatLngBounds(
   new L.LatLng(46.60176240818251, 7.8376534773437925)
 );
 const VISCOSITY = 1;
-const MAX_ZOOM = 9;
+const MAX_ZOOM_MAP = 12;
 const INITIAL_ZOOM = 3;
-
+const MAX_ZOOM_MARKERS = MAX_ZOOM_MAP - 4;
 const MAP_OPTIONS = {
   center: BOUNDS.getCenter(),
   zoom: INITIAL_ZOOM,
-  maxZoom: MAX_ZOOM,
+  maxZoom: MAX_ZOOM_MAP,
   maxBounds: BOUNDS,
   maxBoundsViscosity: VISCOSITY
 };
@@ -40,9 +39,10 @@ let autoCompleteData = [];
 $(document).ready(() => {
   mMap = L.map("mapid", MAP_OPTIONS);
   baseLayer = L.tileLayer(TILE_LAYER, {
-    maxZoom: MAX_ZOOM,
-    id: "mapbox.streets",
-    accessToken: TOKEN
+    attribution:
+      'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    subdomains: "abcd",
+    ext: "jpg"
   });
 
   baseLayer.addTo(mMap);
@@ -57,7 +57,7 @@ const loadSurfingFeatures = async () => {
   // let result = await fetch(URL);
   // let data = await result.json();
   let data = GEO_JSON;
-  let layers =  new L.GeoJSON(data, {
+  let layers = new L.GeoJSON(data, {
     pointToLayer,
     onEachFeature: handleOnEachFeature
   });
@@ -71,7 +71,8 @@ const loadGroupedLayers = () => {
   //Get the number of zoom levels a category can take
   // console.log("My CATEGORIES", categories);
   let zoomLevelsPerCategory = Math.ceil(
-    (MAX_ZOOM - INITIAL_ZOOM) / Object.keys(categories.priorities).length
+    (MAX_ZOOM_MARKERS - INITIAL_ZOOM) /
+      Object.keys(categories.priorities).length
   );
   overlaysObj.priority = {};
   overlaysObj.visible = L.layerGroup(categories.visible);
@@ -158,7 +159,7 @@ const loadAutocomplte = () => {
 };
 
 const loadLayerBaesedOnZoom = () => {
-  let zoomCount = MAX_ZOOM;
+  let zoomCount = MAX_ZOOM_MARKERS;
 
   for (let i in overlaysObj.priority) {
     for (let j in overlaysObj.priority[i]) {
@@ -197,7 +198,14 @@ const handleOnZoomStart = e => {
 const handleOnZoomEnd = e => {
   let currentZoom = mMap.getZoom();
   let zoomEnd = currentZoom;
-  if (zoomStart <= INITIAL_ZOOM || zoomEnd <= INITIAL_ZOOM) return;
+  if (
+    zoomStart <= INITIAL_ZOOM ||
+    zoomEnd <= INITIAL_ZOOM ||
+    zoomEnd > MAX_ZOOM_MARKERS ||
+    zoomStart > MAX_ZOOM_MARKERS
+  ) {
+    return; //User i'ts zooming out of markers range, so do nothing
+  }
 
   //ZOOM IN
   if (zoomStart > zoomEnd) {
@@ -235,9 +243,9 @@ const handleOnSearch = e => {
 const pointToLayer = (feature, latlng) => {
   let text = getPopupHtmlContent(feature);
   let mIcon, marker, popup;
-  let isVisible = feature.properties.visible;
+  let { visible, enlace } = feature.properties;
   let iconOptions = {
-    iconSize: [20, 20],
+    iconSize: [22, 22],
     iconAnchor: [4, 4],
     html: ""
   };
@@ -246,26 +254,26 @@ const pointToLayer = (feature, latlng) => {
     className: "custom",
     autoClose: true
   };
-  if (isVisible) {
-    mIcon = L.divIcon({ ...iconOptions, className: "star" });
-  } else {
-    mIcon = L.divIcon(iconOptions);
-  }
 
+  mIcon = L.divIcon(iconOptions);
   marker = L.marker(latlng, {
     icon: mIcon
   });
 
   if (!L.mobile) {
-    marker.on("mouseover", function(e) {
-      e.target.openPopup();
+    marker.on("mouseover", () => {
+      marker.openPopup();
     });
-    if (isVisible) {
-      popup = marker.bindPopup(text, { ...popupOptions, autoClose: false });
-    } else {
-      popup = marker.bindPopup(text, popupOptions);
-    }
+    marker.on("click", () => {
+      window.open(enlace, "_self");
+    });
+    popup = visible
+      ? marker.bindPopup(text, { ...popupOptions, autoClose: false })
+      : marker.bindPopup(text, popupOptions);
   } else {
+    marker.on("click", () => {
+      marker.openPopup();
+    });
     popup = marker.bindPopup(text, popupOptions);
   }
 

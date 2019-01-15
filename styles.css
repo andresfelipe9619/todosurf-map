@@ -3,13 +3,6 @@
   background: #a8a8a8;
   border-radius: 50%;
 }
-.star {
-  background: #d2ff0a;
-  border-radius: 50%;
-  border-color: #647906;
-  border-width: 1px;
-  border-style: solid;
-}
 
 .custom .leaflet-popup-tip {
   background: #a9a9a9;
