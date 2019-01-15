@@ -12,7 +12,7 @@ const BOUNDS = new L.LatLngBounds(
 const VISCOSITY = 1;
 const MAX_ZOOM_MAP = 12;
 const INITIAL_ZOOM = 3;
-const MAX_ZOOM_MARKERS = MAX_ZOOM_MAP - 4;
+const MAX_ZOOM_MARKERS = MAX_ZOOM_MAP - 3;
 const MAP_OPTIONS = {
   center: BOUNDS.getCenter(),
   zoom: INITIAL_ZOOM,
@@ -260,7 +260,7 @@ const pointToLayer = (feature, latlng) => {
     icon: mIcon
   });
 
-  if (!L.mobile) {
+  if (!isMobileDevice()) {
     marker.on("mouseover", () => {
       marker.openPopup();
     });
@@ -271,9 +271,6 @@ const pointToLayer = (feature, latlng) => {
       ? marker.bindPopup(text, { ...popupOptions, autoClose: false })
       : marker.bindPopup(text, popupOptions);
   } else {
-    marker.on("click", () => {
-      marker.openPopup();
-    });
     popup = marker.bindPopup(text, popupOptions);
   }
 
@@ -294,6 +291,10 @@ const splitBy = (n, a) => {
     }
     return acc;
   }, []);
+};
+
+const isMobileDevice = () => {
+  return (typeof window.orientation !== "undefined") || (navigator.userAgent.indexOf('IEMobile') !== -1);
 };
 
 const getPopupHtmlContent = feature => {
