@@ -3,10 +3,8 @@
 const TILE_LAYER =
   "https://stamen-tiles-{s}.a.ssl.fastly.net/watercolor/{z}/{x}/{y}.{ext}";
 
-const URL = "https://www.todosurf.com/dev/config/classes/geojson.php";
-
 const BOUNDS = new L.LatLngBounds(
-  new L.LatLng(26.947964584439234, -19.859612147656208),
+  new L.LatLng(26.947964584439234, -20.859612147656208),
   new L.LatLng(46.60176240818251, 7.8376534773437925)
 );
 const VISCOSITY = 1;
@@ -34,10 +32,16 @@ let zoomEnd = -1;
 let zoomStart = -1;
 let visiblePopups = new L.layerGroup();
 let autoCompleteData = [];
+let layers;
 // ************************ END APP STATE ******************
 
 // ************************ MAIN ******************
-$(document).ready(() => {
+$(document).ready(() => loadMap());
+// ************************ END MAIN ******************
+
+// ************************ COMMAND FUNCTIONS ******************
+const loadMap = () => {
+  if (mMap) mMap = null;
   mMap = L.map("mapid", MAP_OPTIONS);
   baseLayer = L.tileLayer(TILE_LAYER, {
     attribution:
@@ -50,15 +54,13 @@ $(document).ready(() => {
   loadSurfingFeatures();
   mMap.on("zoomend", handleOnZoomEnd);
   mMap.on("zoomstart", handleOnZoomStart);
-});
-// ************************ END MAIN ******************
-
-// ************************ COMMAND FUNCTIONS ******************
+};
 const loadSurfingFeatures = async () => {
-  // let result = await fetch(URL);
-  // let data = await result.json();
-  let data = GEO_JSON;
-  let layers = new L.GeoJSON(data, {
+  let url = getUrl();
+  let result = await fetch(url);
+  let data = await result.json();
+  // let data = url;
+  layers = new L.GeoJSON(data, {
     pointToLayer,
     onEachFeature: handleOnEachFeature
   });
@@ -173,8 +175,8 @@ const loadLayerBaesedOnZoom = () => {
       if (INITIAL_ZOOM <= zoomCount) zoomCount--;
     }
   }
-  console.log("My Overlays", overlaysObj);
-  console.log("My Layers based on zoom", layersBasedOnZoom);
+  // console.log("My Overlays", overlaysObj);
+  // console.log("My Layers based on zoom", layersBasedOnZoom);
 };
 
 // ************************ END COMMAND FUNCTIONS ******************
@@ -212,14 +214,14 @@ const handleOnZoomEnd = e => {
   //ZOOM IN
   if (zoomStart > zoomEnd) {
     for (let i = zoomStart; i >= zoomEnd; i--) {
-      console.log(`zoomStart ${i} TO zoomEnd ${zoomEnd}`);
+      // console.log(`zoomStart ${i} TO zoomEnd ${zoomEnd}`);
       mMap.removeLayer(layersBasedOnZoom[i]["layer"]);
     }
   }
   //ZOOM OUT
   else if (zoomStart < zoomEnd) {
     for (let j = zoomStart; j <= zoomEnd; j++) {
-      console.log(`zoomStart ${j} TO zoomEnd ${zoomEnd}`);
+      // console.log(`zoomStart ${j} TO zoomEnd ${zoomEnd}`);
       mMap.addLayer(layersBasedOnZoom[j]["layer"]);
     }
   }
@@ -274,7 +276,7 @@ const pointToLayer = (feature, latlng) => {
   popup = visible
     ? marker.bindPopup(text, { ...popupOptions, autoClose: false })
     : marker.bindPopup(text, popupOptions);
-    
+
   autoCompleteData.push({
     id: feature.id,
     text: feature.properties.nombre_busqueda,

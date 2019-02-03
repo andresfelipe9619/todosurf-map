@@ -38,6 +38,8 @@
     />
     <link rel="stylesheet" href="./styles.css" />
     <script src="./data.js"></script>
+    <script src="./north.js"></script>
+
     <style>
       html,
       body {
@@ -54,8 +56,11 @@
 
   <body>
     <div id="mapid"></div>
+    <hr />
+    <input id="isla" type="text" value="" placeholder="ubicacion" />
+    <button id="cambiar">Cambiar</button>
   </body>
-  
+
   <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/js/select2.min.js"></script>
   <script
@@ -70,5 +75,33 @@
   ></script>
   <script src="./lib/leaflet-groupedlayercontrol/dist/leaflet.groupedlayercontrol.min.js"></script>
   <script src="https://unpkg.com/leaflet.vectorgrid@1.2.0"></script>
+  <script>
+    let locationQuery = {
+      url: "https://www.todosurf.com/dev/config/classes/geojson.php",
+      location: ""
+    };
+    $("#cambiar").on("click", () => {
+      setLocation($("#isla").val());
+    });
+    let URL = "";
+    // let DATA = null;
+    const setLocation = location => {
+      locationQuery.location = location;
+    };
+    const getUrl = () => {
+      if (!locationQuery) return;
+      URL = `${locationQuery.url}?location=all`;
+      // DATA = GEO_JSON;
+      if (
+        locationQuery.location != "all" &&
+        locationQuery.location.trim().length > 0
+      ) {
+        URL = `${locationQuery.url}?location=${locationQuery.location}`;
+        // DATA = NORTH;
+      }
+      // return DATA;
+      return String(URL);
+    };
+  </script>
   <script src="./main.js"></script>
 </html>
