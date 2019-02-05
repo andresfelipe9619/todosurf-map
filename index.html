@@ -56,9 +56,6 @@
 
   <body>
     <div id="mapid"></div>
-    <hr />
-    <input id="isla" type="text" value="" placeholder="ubicacion" />
-    <button id="cambiar">Cambiar</button>
   </body>
 
   <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
@@ -78,29 +75,41 @@
   <script>
     let locationQuery = {
       url: "https://www.todosurf.com/dev/config/classes/geojson.php",
-      location: ""
+      location: "all"
     };
-    $("#cambiar").on("click", () => {
-      setLocation($("#isla").val());
-    });
+
     let URL = "";
     // let DATA = null;
     const setLocation = location => {
-      locationQuery.location = location;
+      console.log("location", location);
+      locationQuery.location = location || "all";
+      loadMap();
     };
-    const getUrl = () => {
+    const getLocation = () => {
+      let url = "";
       if (!locationQuery) return;
-      URL = `${locationQuery.url}?location=all`;
-      // DATA = GEO_JSON;
+      url = `${locationQuery.url}?location=all`;
+      DATA = GEO_JSON;
       if (
+        locationQuery.location &&
         locationQuery.location != "all" &&
         locationQuery.location.trim().length > 0
       ) {
-        URL = `${locationQuery.url}?location=${locationQuery.location}`;
-        // DATA = NORTH;
+        url = `${locationQuery.url}?location=${locationQuery.location}`;
+        if (locationQuery.location === "canarias") {
+          DATA = CANARIAS;
+        }
+        if (locationQuery.location === "andalucia") {
+          DATA = ANDALUCIA;
+        }
+        if (locationQuery.location === "portugal") {
+          DATA = PORTUGAL;
+        }
       }
-      // return DATA;
-      return String(URL);
+      locationQuery.url = DATA;
+      console.log("query", locationQuery);
+      return locationQuery;
+      // return String(URL);
     };
   </script>
   <script src="./main.js"></script>

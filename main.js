@@ -4,7 +4,7 @@ const TILE_LAYER =
   "https://stamen-tiles-{s}.a.ssl.fastly.net/watercolor/{z}/{x}/{y}.{ext}";
 
 const BOUNDS = new L.LatLngBounds(
-  new L.LatLng(26.947964584439234, -20.859612147656208),
+  new L.LatLng(26.947964584439234, -22.859612147656208),
   new L.LatLng(46.60176240818251, 7.8376534773437925)
 );
 const VISCOSITY = 1;
@@ -30,19 +30,22 @@ let layersBasedOnZoom = {};
 let baseLayer = null;
 let zoomEnd = -1;
 let zoomStart = -1;
-let visiblePopups = new L.layerGroup();
 let autoCompleteData = [];
-let layers;
+let layers = [];
 // ************************ END APP STATE ******************
 
 // ************************ MAIN ******************
-$(document).ready(() => loadMap());
+$(document).ready(() => {
+  let urlParams = new URLSearchParams(window.location.search);
+  let location = urlParams.get("location");
+  setLocation(location);
+});
 // ************************ END MAIN ******************
 
 // ************************ COMMAND FUNCTIONS ******************
-const loadMap = () => {
+const loadMap = options => {
   if (mMap) mMap = null;
-  mMap = L.map("mapid", MAP_OPTIONS);
+  mMap = L.map("mapid", { ...MAP_OPTIONS, ...options });
   baseLayer = L.tileLayer(TILE_LAYER, {
     attribution:
       'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -56,15 +59,14 @@ const loadMap = () => {
   mMap.on("zoomstart", handleOnZoomStart);
 };
 const loadSurfingFeatures = async () => {
-  let url = getUrl();
-  let result = await fetch(url);
-  let data = await result.json();
-  // let data = url;
-  layers = new L.GeoJSON(data, {
+  let location = getLocation();
+  // let result = await fetch(url);
+  // let data = await result.json();
+  let data = location.url;
+  new L.GeoJSON(data, {
     pointToLayer,
     onEachFeature: handleOnEachFeature
   });
-
   loadSearchControl();
   loadGroupedLayers();
 };
@@ -103,15 +105,16 @@ const loadGroupedLayers = () => {
     for (let i in features) {
       let categoryLayerGroup, categoryArray;
       categoryArray = features[i];
-      categoryLayerGroup = L.layerGroup(categoryArray);
+      categoryLayerGroup = L.featureGroup(categoryArray);
       categoryLayerGroup.categoryName = `${categoryName}-${i}`;
       overlaysObj.priority[categoryName][
         `${categoryName}-${i}`
       ] = categoryLayerGroup;
     }
   }
+
   //I will comment it, but it wiil help later with some debugging
-  // loadGroupedLayerControl();
+  loadGroupedLayerControl();
   loadLayerBaesedOnZoom();
 };
 
@@ -175,8 +178,23 @@ const loadLayerBaesedOnZoom = () => {
       if (INITIAL_ZOOM <= zoomCount) zoomCount--;
     }
   }
-  // console.log("My Overlays", overlaysObj);
-  // console.log("My Layers based on zoom", layersBasedOnZoom);
+  console.log("My Overlays", overlaysObj);
+  console.log("My Layers based on zoom", layersBasedOnZoom);
+  let queryLocation = getLocation();
+  if (queryLocation && queryLocation.location !== "all") {
+    let bounds = [];
+    let first = null;
+
+    for (let i in layersBasedOnZoom) {
+      first = !first ? layersBasedOnZoom[i] : first;
+      console.log("first", first);
+      bounds.push(layersBasedOnZoom[i]["layer"].getBounds());
+    }
+    if (!overlaysObj.visible._layers.length > 0) {
+      mMap.addLayer(first["layer"]);
+    }
+    mMap.fitBounds(bounds);
+  }
 };
 
 // ************************ END COMMAND FUNCTIONS ******************
@@ -276,7 +294,7 @@ const pointToLayer = (feature, latlng) => {
   popup = visible
     ? marker.bindPopup(text, { ...popupOptions, autoClose: false })
     : marker.bindPopup(text, popupOptions);
-
+  layers.push(marker);
   autoCompleteData.push({
     id: feature.id,
     text: feature.properties.nombre_busqueda,
@@ -287,25 +305,20 @@ const pointToLayer = (feature, latlng) => {
 };
 
 //Just split and Array in N parts
-const splitBy = (n, a) => {
-  return a.reduce((acc, curr, i, self) => {
+const splitBy = (n, a) =>
+  a.reduce((acc, curr, i, self) => {
     if (!(i % n)) {
       return [...acc, self.slice(i, i + n)];
     }
     return acc;
   }, []);
-};
 
-const isMobileDevice = () => {
-  return (
-    typeof window.orientation !== "undefined" ||
-    navigator.userAgent.indexOf("IEMobile") !== -1
-  );
-};
+const isMobileDevice = () =>
+  typeof window.orientation !== "undefined" ||
+  navigator.userAgent.indexOf("IEMobile") !== -1;
 
-const getPopupHtmlContent = feature => {
-  let { altura, enlace, nombre } = feature.properties;
-  let text = `
+const getPopupHtmlContent = ({ properties: { altura, enlace, nombre } }) =>
+  `
     <div class="wave-score">
       <span>${altura} </span>
     </div>
@@ -315,11 +328,9 @@ const getPopupHtmlContent = feature => {
         ${nombre} 
       </a>
     </div>`;
-  return text;
-};
 
-const getControlHtmlContent = () => {
-  return `
+const getControlHtmlContent = () =>
+  `
  <div id="controlbox">
   <div class="form-group">
   <div class="input-group">
@@ -334,4 +345,3 @@ const getControlHtmlContent = () => {
   </div>
   </div>
 </div>`;
-};
