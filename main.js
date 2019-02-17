@@ -22,6 +22,7 @@ const MAP_OPTIONS = {
 //VARIABLES
 let mMap = null;
 let categories = {
+  visible: [],
   priorities: {}
 };
 let overlaysObj = {};
@@ -78,9 +79,9 @@ const loadGroupedLayers = () => {
   //     Object.keys(categories.priorities).length
   // );
   overlaysObj.priority = {};
-  // overlaysObj.visible = L.layerGroup(categories.visible);
-  // mMap.addLayer(overlaysObj.visible);
-  // overlaysObj.visible.eachLayer(marker => marker.openPopup());
+  overlaysObj.visible = L.layerGroup(categories.visible);
+  mMap.addLayer(overlaysObj.visible);
+  overlaysObj.visible.eachLayer(marker => marker.openPopup());
 
   // overlaysObj.visible.openPopup()
   //iterate over the  categories.priorities (priorities)
@@ -119,12 +120,14 @@ const loadGroupedLayers = () => {
 //Initialize grouped layers control
 const loadGroupedLayerControl = () => {
   let priority = {};
+  let visible = overlaysObj.visible;
   for (let i in overlaysObj.priority) {
     for (let j in overlaysObj.priority[i]) {
       priority[j] = overlaysObj.priority[i][j];
     }
   }
   let groupedOverlays = {
+    Visible: { "1": visible },
     Prioridades: priority
   };
   let mapabase = {
@@ -132,7 +135,6 @@ const loadGroupedLayerControl = () => {
   };
   L.control.groupedLayers(mapabase, groupedOverlays).addTo(mMap);
 };
-
 //Create custom search control by extending leaflet control
 //a control is a HTML element that remains static relativfe to the map container
 const loadSearchControl = () => {
@@ -172,17 +174,15 @@ const loadLayerBaesedOnZoom = () => {
 
     for (let i in layersBasedOnZoom) {
       first = !first ? layersBasedOnZoom[i] : first;
-      console.log("first", first);
       bounds.push(layersBasedOnZoom[i]["layer"].getBounds());
+      mMap.addLayer(layersBasedOnZoom[i]["layer"]);
     }
-    mMap.addLayer(first["layer"]);
-    first["layer"].openPopup();
+
     mMap.fitBounds(bounds);
   } else {
     for (let i in overlaysObj.priority) {
       for (let j in overlaysObj.priority[i]) {
         mMap.addLayer(overlaysObj.priority[i][j]);
-        overlaysObj.priority[i][j].openPopup();
       }
     }
   }
@@ -193,13 +193,17 @@ const loadLayerBaesedOnZoom = () => {
 // ************************ EVENT HANDLERS ******************
 
 const handleOnEachFeature = (feature, layer) => {
-  let { prioridad } = feature.properties;
-
-  if (typeof categories.priorities[prioridad] === "undefined") {
-    categories.priorities[prioridad] = [];
+  let { prioridad, visible } = feature.properties;
+  if (visible && visible === 1) {
+    categories.visible.push(layer);
+  } else {
+    if (typeof categories.priorities[prioridad] === "undefined") {
+      categories.priorities[prioridad] = [];
+    }
+    categories.priorities[prioridad].push(layer);
   }
-  categories.priorities[prioridad].push(layer);
 };
+
 const handleOnZoomStart = e => {
   let currentZoom = mMap.getZoom();
   zoomStart = currentZoom;
@@ -228,15 +232,15 @@ const handleOnZoomEnd = e => {
   //   }
   // }
   //ZOOM OUT
-  else if (zoomStart < zoomEnd) {
-    for (let j = zoomStart; j <= zoomEnd; j++) {
-      let layerZoom = layersBasedOnZoom[j];
-      // console.log(`zoomStart ${j} TO zoomEnd ${zoomEnd}`);
-      if (layerZoom && layerZoom["layer"]) {
-        mMap.addLayer(layerZoom["layer"]);
-      }
-    }
-  }
+  // else if (zoomStart < zoomEnd) {
+  //   for (let j = zoomStart; j <= zoomEnd; j++) {
+  //     let layerZoom = layersBasedOnZoom[j];
+  //     // console.log(`zoomStart ${j} TO zoomEnd ${zoomEnd}`);
+  //     if (layerZoom && layerZoom["layer"]) {
+  //       mMap.addLayer(layerZoom["layer"]);
+  //     }
+  //   }
+  // }
 };
 
 const handleOnAddSearchControl = () => {
@@ -272,7 +276,7 @@ const getLayersBaseOnZoom = () => {
 const pointToLayer = (feature, latlng) => {
   let text = getPopupHtmlContent(feature);
   let mIcon, marker, popup;
-  let { enlace } = feature.properties;
+  let { visible, enlace } = feature.properties;
   let iconOptions = {
     iconSize: [22, 22],
     iconAnchor: [4, 4],
@@ -297,7 +301,9 @@ const pointToLayer = (feature, latlng) => {
       window.open(enlace, "_self");
     });
   }
-  popup = marker.bindPopup(text, popupOptions);
+  popup = visible
+    ? marker.bindPopup(text, { ...popupOptions, autoClose: false })
+    : marker.bindPopup(text, popupOptions);
   autoCompleteData.push({
     id: feature.id,
     text: feature.properties.nombre_busqueda,

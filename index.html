@@ -80,7 +80,7 @@
 
     const setLocation = location => {
       locationQuery.location = location || "all";
-      let regionZoom = location && location !== "all" && { minZoom: 8 };
+      let regionZoom = location && location !== "all" && { minZoom: 6 };
       loadMap(regionZoom);
     };
     const getLocation = () => {
