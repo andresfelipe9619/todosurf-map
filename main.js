@@ -295,6 +295,9 @@ const pointToLayer = (feature, latlng) => {
 
   if (!isMobileDevice()) {
     marker.on("mouseover", () => {
+      for (let data of autoCompleteData) {
+        data.marker.closePopup();
+      }
       marker.openPopup();
     });
     marker.on("click", () => {
