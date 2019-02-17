@@ -78,38 +78,24 @@
       location: "all"
     };
 
-    let URL = "";
-    // let DATA = null;
     const setLocation = location => {
-      console.log("location", location);
       locationQuery.location = location || "all";
-      loadMap();
+      let regionZoom = location && location !== "all" && { minZoom: 8 };
+      loadMap(regionZoom);
     };
     const getLocation = () => {
       let url = "";
       if (!locationQuery) return;
       url = `${locationQuery.url}?location=all`;
-      DATA = GEO_JSON;
       if (
         locationQuery.location &&
         locationQuery.location != "all" &&
         locationQuery.location.trim().length > 0
       ) {
         url = `${locationQuery.url}?location=${locationQuery.location}`;
-        if (locationQuery.location === "canarias") {
-          DATA = CANARIAS;
-        }
-        if (locationQuery.location === "andalucia") {
-          DATA = ANDALUCIA;
-        }
-        if (locationQuery.location === "portugal") {
-          DATA = PORTUGAL;
-        }
       }
-      locationQuery.url = DATA;
-      console.log("query", locationQuery);
+      locationQuery.url = url;
       return locationQuery;
-      // return String(URL);
     };
   </script>
   <script src="./main.js"></script>

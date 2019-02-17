@@ -22,7 +22,6 @@ const MAP_OPTIONS = {
 //VARIABLES
 let mMap = null;
 let categories = {
-  visible: [],
   priorities: {}
 };
 let overlaysObj = {};
@@ -31,7 +30,6 @@ let baseLayer = null;
 let zoomEnd = -1;
 let zoomStart = -1;
 let autoCompleteData = [];
-let layers = [];
 // ************************ END APP STATE ******************
 
 // ************************ MAIN ******************
@@ -60,9 +58,8 @@ const loadMap = options => {
 };
 const loadSurfingFeatures = async () => {
   let location = getLocation();
-  // let result = await fetch(url);
-  // let data = await result.json();
-  let data = location.url;
+  let result = await fetch(location.url);
+  let data = await result.json();
   new L.GeoJSON(data, {
     pointToLayer,
     onEachFeature: handleOnEachFeature
@@ -75,14 +72,15 @@ const loadGroupedLayers = () => {
   let categoryName;
   //Get the number of zoom levels a category can take
   // console.log("My CATEGORIES", categories);
-  let zoomLevelsPerCategory = Math.ceil(
-    (MAX_ZOOM_MARKERS - INITIAL_ZOOM) /
-      Object.keys(categories.priorities).length
-  );
+  let zoomLevelsPerCategory = 1;
+  // Math.ceil(
+  //   (MAX_ZOOM_MARKERS - INITIAL_ZOOM) /
+  //     Object.keys(categories.priorities).length
+  // );
   overlaysObj.priority = {};
-  overlaysObj.visible = L.layerGroup(categories.visible);
-  mMap.addLayer(overlaysObj.visible);
-  overlaysObj.visible.eachLayer(marker => marker.openPopup());
+  // overlaysObj.visible = L.layerGroup(categories.visible);
+  // mMap.addLayer(overlaysObj.visible);
+  // overlaysObj.visible.eachLayer(marker => marker.openPopup());
 
   // overlaysObj.visible.openPopup()
   //iterate over the  categories.priorities (priorities)
@@ -95,7 +93,7 @@ const loadGroupedLayers = () => {
     );
     let splitedArray = splitBy(featuresPerZoomLevel, category);
     console.log(
-      `[${categoryName}] ZOOM LVLS X CATEFORY=${zoomLevelsPerCategory} & FEATURES X ZOOM LVL=${featuresPerZoomLevel}`
+      `[CAT-NAME=${categoryName}] ZOOM LVLS X CATEGORY=${zoomLevelsPerCategory} & FEATURES X ZOOM LVL=${featuresPerZoomLevel}`
     );
     let features = Object.assign({}, splitedArray);
 
@@ -121,14 +119,12 @@ const loadGroupedLayers = () => {
 //Initialize grouped layers control
 const loadGroupedLayerControl = () => {
   let priority = {};
-  let visible = overlaysObj.visible;
   for (let i in overlaysObj.priority) {
     for (let j in overlaysObj.priority[i]) {
       priority[j] = overlaysObj.priority[i][j];
     }
   }
   let groupedOverlays = {
-    Visible: { "1": visible },
     Prioridades: priority
   };
   let mapabase = {
@@ -166,22 +162,11 @@ const loadAutocomplte = () => {
 };
 
 const loadLayerBaesedOnZoom = () => {
-  let zoomCount = MAX_ZOOM_MARKERS;
-
-  for (let i in overlaysObj.priority) {
-    for (let j in overlaysObj.priority[i]) {
-      console.log(`Zoom lvl=${zoomCount} HAS subcategory=${i}-${j}`);
-      let z = zoomCount;
-      let layer = overlaysObj.priority[i][j];
-      layersBasedOnZoom[zoomCount] = {};
-      layersBasedOnZoom[zoomCount]["layer"] = layer;
-      if (INITIAL_ZOOM <= zoomCount) zoomCount--;
-    }
-  }
-  console.log("My Overlays", overlaysObj);
-  console.log("My Layers based on zoom", layersBasedOnZoom);
   let queryLocation = getLocation();
+  console.log("My Overlays", overlaysObj);
   if (queryLocation && queryLocation.location !== "all") {
+    getLayersBaseOnZoom();
+    console.log("My Layers based on zoom", layersBasedOnZoom);
     let bounds = [];
     let first = null;
 
@@ -190,10 +175,12 @@ const loadLayerBaesedOnZoom = () => {
       console.log("first", first);
       bounds.push(layersBasedOnZoom[i]["layer"].getBounds());
     }
-    if (!overlaysObj.visible._layers.length > 0) {
-      mMap.addLayer(first["layer"]);
-    }
+    mMap.addLayer(first["layer"]);
     mMap.fitBounds(bounds);
+  } else {
+    for (let i in overlaysObj.priority) {
+      overlaysObj.priority[i].eachLayer(marker => marker.openPopup());
+    }
   }
 };
 
@@ -202,15 +189,12 @@ const loadLayerBaesedOnZoom = () => {
 // ************************ EVENT HANDLERS ******************
 
 const handleOnEachFeature = (feature, layer) => {
-  let { prioridad, visible } = feature.properties;
-  if (visible && visible === 1) {
-    categories.visible.push(layer);
-  } else {
-    if (typeof categories.priorities[prioridad] === "undefined") {
-      categories.priorities[prioridad] = [];
-    }
-    categories.priorities[prioridad].push(layer);
+  let { prioridad } = feature.properties;
+
+  if (typeof categories.priorities[prioridad] === "undefined") {
+    categories.priorities[prioridad] = [];
   }
+  categories.priorities[prioridad].push(layer);
 };
 const handleOnZoomStart = e => {
   let currentZoom = mMap.getZoom();
@@ -230,17 +214,23 @@ const handleOnZoomEnd = e => {
   }
 
   //ZOOM IN
-  if (zoomStart > zoomEnd) {
-    for (let i = zoomStart; i >= zoomEnd; i--) {
-      // console.log(`zoomStart ${i} TO zoomEnd ${zoomEnd}`);
-      mMap.removeLayer(layersBasedOnZoom[i]["layer"]);
-    }
-  }
+  // if (zoomStart > zoomEnd) {
+  //   for (let i = zoomStart; i >= zoomEnd; i--) {
+  //     let layerZoom = layersBasedOnZoom[i];
+  //     // console.log(`zoomStart ${i} TO zoomEnd ${zoomEnd}`);
+  //     if (layerZoom && layerZoom["layer"]) {
+  //       mMap.removeLayer(layerZoom["layer"]);
+  //     }
+  //   }
+  // }
   //ZOOM OUT
   else if (zoomStart < zoomEnd) {
     for (let j = zoomStart; j <= zoomEnd; j++) {
+      let layerZoom = layersBasedOnZoom[j];
       // console.log(`zoomStart ${j} TO zoomEnd ${zoomEnd}`);
-      mMap.addLayer(layersBasedOnZoom[j]["layer"]);
+      if (layerZoom && layerZoom["layer"]) {
+        mMap.addLayer(layerZoom["layer"]);
+      }
     }
   }
 };
@@ -262,10 +252,23 @@ const handleOnSearch = e => {
 
 // ************************ END EVENT HANDLERS ******************
 
+const getLayersBaseOnZoom = () => {
+  let zoomCount = MAX_ZOOM_MARKERS;
+  for (let i in overlaysObj.priority) {
+    for (let j in overlaysObj.priority[i]) {
+      console.log(`Zoom lvl=${zoomCount} HAS subcategory=${i}-${j}`);
+      let layer = overlaysObj.priority[i][j];
+      layersBasedOnZoom[zoomCount] = {};
+      layersBasedOnZoom[zoomCount]["layer"] = layer;
+      if (INITIAL_ZOOM <= zoomCount) zoomCount--;
+    }
+  }
+};
+
 const pointToLayer = (feature, latlng) => {
   let text = getPopupHtmlContent(feature);
   let mIcon, marker, popup;
-  let { visible, enlace } = feature.properties;
+  let { enlace } = feature.properties;
   let iconOptions = {
     iconSize: [22, 22],
     iconAnchor: [4, 4],
@@ -284,17 +287,16 @@ const pointToLayer = (feature, latlng) => {
 
   if (!isMobileDevice()) {
     marker.on("mouseover", () => {
-      overlaysObj.visible.eachLayer(marker => marker.closePopup());
       marker.openPopup();
     });
     marker.on("click", () => {
       window.open(enlace, "_self");
     });
   }
-  popup = visible
-    ? marker.bindPopup(text, { ...popupOptions, autoClose: false })
-    : marker.bindPopup(text, popupOptions);
-  layers.push(marker);
+  popup =
+    getLocation().location === "all"
+      ? marker.bindPopup(text, { ...popupOptions, autoClose: false })
+      : marker.bindPopup(text, popupOptions);
   autoCompleteData.push({
     id: feature.id,
     text: feature.properties.nombre_busqueda,
