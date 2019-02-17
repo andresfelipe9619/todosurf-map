@@ -297,10 +297,7 @@ const pointToLayer = (feature, latlng) => {
       window.open(enlace, "_self");
     });
   }
-  popup =
-    getLocation().location === "all"
-      ? marker.bindPopup(text, { ...popupOptions, autoClose: false })
-      : marker.bindPopup(text, popupOptions);
+  popup = marker.bindPopup(text, popupOptions);
   autoCompleteData.push({
     id: feature.id,
     text: feature.properties.nombre_busqueda,
