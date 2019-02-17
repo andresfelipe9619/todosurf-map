@@ -176,10 +176,14 @@ const loadLayerBaesedOnZoom = () => {
       bounds.push(layersBasedOnZoom[i]["layer"].getBounds());
     }
     mMap.addLayer(first["layer"]);
+    first["layer"].openPopup();
     mMap.fitBounds(bounds);
   } else {
     for (let i in overlaysObj.priority) {
-      overlaysObj.priority[i].eachLayer(marker => marker.openPopup());
+      for (let j in overlaysObj.priority[i]) {
+        mMap.addLayer(overlaysObj.priority[i][j]);
+        overlaysObj.priority[i][j].openPopup();
+      }
     }
   }
 };
