@@ -28,9 +28,6 @@ let categories = {
 let overlaysObj = {};
 let layersBasedOnZoom = {};
 let baseLayer = null;
-let zoomEnd = -1;
-let zoomStart = -1;
-let autoCompleteData = [];
 // ************************ END APP STATE ******************
 
 // ************************ MAIN ******************
@@ -57,15 +54,19 @@ const loadMap = options => {
   loadSurfingFeatures();
 };
 const loadSurfingFeatures = async () => {
-  let location = getLocation();
-  let result = await fetch(location.url);
-  let data = await result.json();
-  new L.GeoJSON(data, {
-    pointToLayer,
-    onEachFeature: handleOnEachFeature
-  });
-  loadSearchControl();
-  loadGroupedLayers();
+  try {
+    let location = getLocation();
+    let result = await fetch(location.url);
+    let data = await result.json();
+    new L.GeoJSON(data, {
+      pointToLayer,
+      onEachFeature: handleOnEachFeature
+    });
+
+    loadGroupedLayers();
+  } catch (e) {
+    console.log("ERROR", e);
+  }
 };
 
 const loadGroupedLayers = () => {
@@ -127,33 +128,6 @@ const loadGroupedLayerControl = () => {
   };
   L.control.groupedLayers(mapabase, groupedOverlays).addTo(mMap);
 };
-//Create custom search control by extending leaflet control
-//a control is a HTML element that remains static relativfe to the map container
-const loadSearchControl = () => {
-  let SearchBox = L.Control.extend({
-    options: { position: "topleft" },
-    onAdd: handleOnAddSearchControl
-  });
-  new SearchBox().addTo(mMap);
-  loadAutocomplte();
-};
-
-//Initialize select2 and it's bootstrap theme
-const loadAutocomplte = () => {
-  //Create select2 data schema
-  let data = autoCompleteData;
-  $.fn.select2.defaults.set("theme", "bootstrap");
-  $("#search-box").select2({
-    data,
-    width: "80%",
-    placeholder: "Selecciona una playa"
-  });
-
-  $("#search-box").on("select2:select", handleOnSearch);
-  $("button[data-select2-open]").click(() => {
-    $("#search-box").select2("open");
-  });
-};
 
 const loadLayerBaesedOnZoom = () => {
   let queryLocation = getLocation();
@@ -197,21 +171,6 @@ const handleOnEachFeature = (feature, layer) => {
     }
     categories.priorities[prioridad].push(layer);
   }
-};
-
-const handleOnAddSearchControl = () => {
-  let container = L.DomUtil.create("div");
-  container.id = "controlcontainer";
-  $(container).html(getControlHtmlContent());
-  L.DomEvent.disableClickPropagation(container);
-  return container;
-};
-
-const handleOnSearch = e => {
-  let { marker } = e.params.data;
-  mMap.addLayer(marker);
-  mMap.setView(marker.getLatLng(), 8);
-  marker.openPopup();
 };
 
 // ************************ END EVENT HANDLERS ******************
@@ -263,11 +222,6 @@ const pointToLayer = (feature, latlng) => {
   popup = visible
     ? marker.bindPopup(text, { ...popupOptions, autoClose: false })
     : marker.bindPopup(text, popupOptions);
-  autoCompleteData.push({
-    id: feature.id,
-    text: feature.properties.nombre_busqueda,
-    marker: marker
-  });
 
   return popup;
 };
@@ -296,20 +250,3 @@ const getPopupHtmlContent = ({ properties: { altura, enlace, nombre } }) =>
         ${nombre} 
       </a>
     </div>`;
-
-const getControlHtmlContent = () =>
-  `
- <div id="controlbox">
-  <div class="form-group">
-  <div class="input-group">
-    <select id="search-box" class="form-control select2-allow-clear">
-    <option></option>
-    </select>
-    <span class="input-group-btn">
-      <button id="btn-search" class="btn btn-default " type="button" data-select2-open="search-box">
-      <span class="fa fa-search fa-flip-horizontal"></span>
-      </button>
-    </span>
-  </div>
-  </div>
-</div>`;
