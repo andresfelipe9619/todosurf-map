@@ -13,10 +13,10 @@ const INITIAL_ZOOM = 4;
 const MAX_ZOOM_MARKERS = MAX_ZOOM_MAP - 4;
 const MAP_OPTIONS = {
   zoom: INITIAL_ZOOM,
-  center: BOUNDS.getCenter(),
+  // center: BOUNDS.getCenter(),
   minZoom: INITIAL_ZOOM,
   maxZoom: MAX_ZOOM_MAP,
-  maxBounds: BOUNDS,
+  // maxBounds: BOUNDS,
   maxBoundsViscosity: VISCOSITY
 };
 //VARIABLES
@@ -36,8 +36,9 @@ let autoCompleteData = [];
 // ************************ MAIN ******************
 $(document).ready(() => {
   let urlParams = new URLSearchParams(window.location.search);
+  let country = urlParams.get("country");
   let location = urlParams.get("location");
-  setLocation(location);
+  setLocation({ country, location });
 });
 // ************************ END MAIN ******************
 
@@ -58,10 +59,10 @@ const loadMap = options => {
   mMap.on("zoomstart", handleOnZoomStart);
 };
 const loadSurfingFeatures = async () => {
-  let location = getLocation();
-  let result = await fetch(location.url);
-  let data = await result.json();
-  new L.GeoJSON(data, {
+  // let location = getLocation();
+  // let result = await fetch(location.url);
+  // let data = await result.json();
+  new L.GeoJSON(COSTA_RICA, {
     pointToLayer,
     onEachFeature: handleOnEachFeature
   });
@@ -71,20 +72,13 @@ const loadSurfingFeatures = async () => {
 
 const loadGroupedLayers = () => {
   let categoryName;
-  //Get the number of zoom levels a category can take
-  // console.log("My CATEGORIES", categories);
   let zoomLevelsPerCategory = 1;
-  // Math.ceil(
-  //   (MAX_ZOOM_MARKERS - INITIAL_ZOOM) /
-  //     Object.keys(categories.priorities).length
-  // );
+
   overlaysObj.priority = {};
   overlaysObj.visible = L.layerGroup(categories.visible);
   mMap.addLayer(overlaysObj.visible);
   overlaysObj.visible.eachLayer(marker => marker.openPopup());
 
-  // overlaysObj.visible.openPopup()
-  //iterate over the  categories.priorities (priorities)
   for (categoryName in categories.priorities) {
     let category = categories.priorities[categoryName];
     let categoryLength = category.length;
@@ -166,26 +160,29 @@ const loadAutocomplte = () => {
 const loadLayerBaesedOnZoom = () => {
   let queryLocation = getLocation();
   console.log("My Overlays", overlaysObj);
+  let bounds = [];
   if (queryLocation && queryLocation.location !== "all") {
     getLayersBaseOnZoom();
     console.log("My Layers based on zoom", layersBasedOnZoom);
-    let bounds = [];
     let first = null;
 
     for (let i in layersBasedOnZoom) {
       first = !first ? layersBasedOnZoom[i] : first;
-      bounds.push(layersBasedOnZoom[i]["layer"].getBounds());
-      mMap.addLayer(layersBasedOnZoom[i]["layer"]);
+      let layer = layersBasedOnZoom[i]["layer"];
+      bounds.push(layer.getBounds());
+      mMap.addLayer(layer);
     }
-
-    mMap.fitBounds(bounds);
   } else {
     for (let i in overlaysObj.priority) {
       for (let j in overlaysObj.priority[i]) {
-        mMap.addLayer(overlaysObj.priority[i][j]);
+        let layer = overlaysObj.priority[i][j];
+        bounds.push(layer.getBounds());
+        mMap.addLayer(layer);
       }
     }
   }
+  mMap.fitBounds(bounds);
+  mMap.setMaxBounds(mMap.getBounds());
 };
 
 // ************************ END COMMAND FUNCTIONS ******************

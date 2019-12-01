@@ -75,28 +75,31 @@
   <script>
     let locationQuery = {
       url: "https://www.todosurf.com/dev/config/classes/geojson.php",
-      location: "all"
+      location: "all",
+      country: null
     };
 
-    const setLocation = location => {
+    const setLocation = ({ country, location }) => {
       locationQuery.location = location || "all";
-      let regionZoom = location && location !== "all" && { minZoom: 6 };
+      locationQuery.country = country || "España";
+      let regionZoom = location && isLocation(location) && { minZoom: 6 };
       loadMap(regionZoom);
     };
     const getLocation = () => {
-      let url = "";
       if (!locationQuery) return;
-      url = `${locationQuery.url}?location=all`;
-      if (
-        locationQuery.location &&
-        locationQuery.location != "all" &&
-        locationQuery.location.trim().length > 0
-      ) {
-        url = `${locationQuery.url}?location=${locationQuery.location}`;
+      const { location, country } = locationQuery;
+      let url = `${locationQuery.url}?country=España&location=all`;
+      const hasLocation = isNotEmpty(location) && isLocation(location);
+      const hasCountry = isNotEmpty(country);
+      if (hasCountry) {
+        url = `${locationQuery.url}?country=${country}&location=${location}`;
       }
       locationQuery.url = url;
+      console.log("locationQuery", locationQuery);
       return locationQuery;
     };
+    const isNotEmpty = s => !!(s || "").trim().length;
+    const isLocation = l => l !== "all";
   </script>
   <script src="./main.js"></script>
 </html>
