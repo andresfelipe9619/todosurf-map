@@ -55,14 +55,12 @@ const loadMap = options => {
 
   baseLayer.addTo(mMap);
   loadSurfingFeatures();
-  mMap.on("zoomend", handleOnZoomEnd);
-  mMap.on("zoomstart", handleOnZoomStart);
 };
 const loadSurfingFeatures = async () => {
-  // let location = getLocation();
-  // let result = await fetch(location.url);
-  // let data = await result.json();
-  new L.GeoJSON(COSTA_RICA, {
+  let location = getLocation();
+  let result = await fetch(location.url);
+  let data = await result.json();
+  new L.GeoJSON(data, {
     pointToLayer,
     onEachFeature: handleOnEachFeature
   });
@@ -199,45 +197,6 @@ const handleOnEachFeature = (feature, layer) => {
     }
     categories.priorities[prioridad].push(layer);
   }
-};
-
-const handleOnZoomStart = e => {
-  let currentZoom = mMap.getZoom();
-  zoomStart = currentZoom;
-};
-
-const handleOnZoomEnd = e => {
-  let currentZoom = mMap.getZoom();
-  let zoomEnd = currentZoom;
-  if (
-    zoomStart <= INITIAL_ZOOM ||
-    zoomEnd <= INITIAL_ZOOM ||
-    zoomEnd > MAX_ZOOM_MARKERS ||
-    zoomStart > MAX_ZOOM_MARKERS
-  ) {
-    return; //User i'ts zooming out of markers range, so do nothing
-  }
-
-  //ZOOM IN
-  // if (zoomStart > zoomEnd) {
-  //   for (let i = zoomStart; i >= zoomEnd; i--) {
-  //     let layerZoom = layersBasedOnZoom[i];
-  //     // console.log(`zoomStart ${i} TO zoomEnd ${zoomEnd}`);
-  //     if (layerZoom && layerZoom["layer"]) {
-  //       mMap.removeLayer(layerZoom["layer"]);
-  //     }
-  //   }
-  // }
-  //ZOOM OUT
-  // else if (zoomStart < zoomEnd) {
-  //   for (let j = zoomStart; j <= zoomEnd; j++) {
-  //     let layerZoom = layersBasedOnZoom[j];
-  //     // console.log(`zoomStart ${j} TO zoomEnd ${zoomEnd}`);
-  //     if (layerZoom && layerZoom["layer"]) {
-  //       mMap.addLayer(layerZoom["layer"]);
-  //     }
-  //   }
-  // }
 };
 
 const handleOnAddSearchControl = () => {
