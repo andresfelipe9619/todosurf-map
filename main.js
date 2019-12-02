@@ -28,6 +28,7 @@ let categories = {
 let overlaysObj = {};
 let layersBasedOnZoom = {};
 let baseLayer = null;
+let autoCompleteData = [];
 // ************************ END APP STATE ******************
 
 // ************************ MAIN ******************
@@ -222,7 +223,11 @@ const pointToLayer = (feature, latlng) => {
   popup = visible
     ? marker.bindPopup(text, { ...popupOptions, autoClose: false })
     : marker.bindPopup(text, popupOptions);
-
+  autoCompleteData.push({
+    id: feature.id,
+    text: feature.properties.nombre_busqueda,
+    marker: marker
+  });
   return popup;
 };
 
