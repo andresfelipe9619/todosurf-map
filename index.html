@@ -37,9 +37,6 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./styles.css" />
-    <script src="./data.js"></script>
-    <script src="./north.js"></script>
-
     <style>
       html,
       body {
@@ -82,24 +79,26 @@
     const setLocation = ({ country, location }) => {
       locationQuery.location = location || "all";
       locationQuery.country = country || "España";
-      let regionZoom = location && isLocation(location) && { minZoom: 6 };
+      let regionZoom = location && isNotAll(location) && { minZoom: 6 };
       loadMap(regionZoom);
     };
     const getLocation = () => {
       if (!locationQuery) return;
       const { location, country } = locationQuery;
-      let url = `${locationQuery.url}?country=España&location=all`;
-      const hasLocation = isNotEmpty(location) && isLocation(location);
+      let url = `${locationQuery.url}?country=España`;
+      const hasLocation = isNotEmpty(location) && isNotAll(location);
       const hasCountry = isNotEmpty(country);
       if (hasCountry) {
-        url = `${locationQuery.url}?country=${country}&location=${location}`;
+        url = `${locationQuery.url}?country=${country}${
+          isNotAll(country) ? `&location=${location}` : ""
+        }`;
       }
       locationQuery.url = url;
       console.log("locationQuery", locationQuery);
       return locationQuery;
     };
     const isNotEmpty = s => !!(s || "").trim().length;
-    const isLocation = l => l !== "all";
+    const isNotAll = l => l !== "all";
   </script>
   <script src="./main.js"></script>
 </html>

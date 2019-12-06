@@ -4,16 +4,16 @@ const TILE_LAYER =
   "https://stamen-tiles-{s}.a.ssl.fastly.net/watercolor/{z}/{x}/{y}.{ext}";
 
 const BOUNDS = new L.LatLngBounds(
-  new L.LatLng(26.947964584439234, -22.859612147656208),
-  new L.LatLng(46.60176240818251, 7.8376534773437925)
+  new L.LatLng(-25.35452, -80.242609),
+  new L.LatLng(70.836104, 25.921826)
 );
-const VISCOSITY = 1;
+const VISCOSITY = 0.1;
 const MAX_ZOOM_MAP = 14;
 const INITIAL_ZOOM = 4;
 const MAX_ZOOM_MARKERS = MAX_ZOOM_MAP - 4;
 const MAP_OPTIONS = {
   zoom: INITIAL_ZOOM,
-  // center: BOUNDS.getCenter(),
+  center: BOUNDS.getCenter(),
   minZoom: INITIAL_ZOOM,
   maxZoom: MAX_ZOOM_MAP,
   // maxBounds: BOUNDS,
@@ -107,7 +107,7 @@ const loadGroupedLayers = () => {
   }
 
   //I will comment it, but it wiil help later with some debugging
-  loadGroupedLayerControl();
+  // loadGroupedLayerControl();
   loadLayerBaesedOnZoom();
 };
 
@@ -132,30 +132,36 @@ const loadGroupedLayerControl = () => {
 
 const loadLayerBaesedOnZoom = () => {
   let queryLocation = getLocation();
-  console.log("My Overlays", overlaysObj);
-  let bounds = [];
+  var bounds = [];
   if (queryLocation && queryLocation.location !== "all") {
     getLayersBaseOnZoom();
     console.log("My Layers based on zoom", layersBasedOnZoom);
-    let first = null;
 
     for (let i in layersBasedOnZoom) {
-      first = !first ? layersBasedOnZoom[i] : first;
       let layer = layersBasedOnZoom[i]["layer"];
-      bounds.push(layer.getBounds());
+      let layerBounds = layer.getBounds();
+      console.log("layerBounds", layerBounds);
+      bounds.push(layerBounds);
       mMap.addLayer(layer);
     }
   } else {
+    console.log("My Overlays", overlaysObj);
     for (let i in overlaysObj.priority) {
       for (let j in overlaysObj.priority[i]) {
         let layer = overlaysObj.priority[i][j];
-        bounds.push(layer.getBounds());
+        let layerBounds = layer.getBounds();
+        console.log("layerBounds", layerBounds);
+        bounds.push(layerBounds);
         mMap.addLayer(layer);
       }
     }
   }
-  mMap.fitBounds(bounds);
-  mMap.setMaxBounds(mMap.getBounds());
+  console.log("bounds", bounds);
+  if (bounds.length) {
+    mMap.fitBounds(bounds);
+    mMap.setMaxBounds(bounds);
+    setTimeout(() => mMap.setZoom(mMap.getZoom() - 1), 500);
+  }
 };
 
 // ************************ END COMMAND FUNCTIONS ******************
@@ -194,9 +200,12 @@ const pointToLayer = (feature, latlng) => {
   let mIcon, marker, popup;
   let { visible, enlace } = feature.properties;
   let iconOptions = {
-    iconSize: [22, 22],
-    iconAnchor: [4, 4],
-    html: ""
+    iconSize: [60, 70],
+    shadowSize: [50, 50],
+    iconAnchor: [22, 70],
+    shadowAnchor: [4, 50],
+    popupAnchor: [4, -60],
+    iconUrl: "marker.png"
   };
   let popupOptions = {
     closeButton: false,
@@ -204,7 +213,7 @@ const pointToLayer = (feature, latlng) => {
     autoClose: true
   };
 
-  mIcon = L.divIcon(iconOptions);
+  mIcon = L.icon(iconOptions);
   marker = L.marker(latlng, {
     icon: mIcon
   });
