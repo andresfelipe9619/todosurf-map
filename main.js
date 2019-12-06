@@ -138,6 +138,7 @@ const loadLayerBaesedOnZoom = () => {
     maxlat = 0,
     maxlon = 0;
   const setCorners = ({ _northEast, _southWest }) => {
+    if (!_northEast || !_southWest) return;
     if (minlat > _southWest.lat || minlat === 0) minlat = _southWest.lat;
     if (minlon > _southWest.lng || minlon === 0) minlon = _southWest.lng;
     if (maxlat < _northEast.lat || maxlat === 0) maxlat = _northEast.lat;
@@ -169,13 +170,15 @@ const loadLayerBaesedOnZoom = () => {
       }
     }
   }
-  const boundForExtraSpace = new L.LatLngBounds(
-    new L.LatLng(minlat - 5, minlon - 5),
-    new L.LatLng(maxlat + 5, maxlon + 5)
-  );
-
-  bounds.push(boundForExtraSpace);
+  if (minlat !== 0 && minlon !== 0) {
+    const boundForExtraSpace = new L.LatLngBounds(
+      new L.LatLng(minlat - 5, minlon - 5),
+      new L.LatLng(maxlat + 5, maxlon + 5)
+    );
+    bounds.push(boundForExtraSpace);
+  }
   console.log("bounds", bounds);
+
   if (bounds.length) {
     mMap.fitBounds(bounds);
     mMap.setMaxBounds(bounds);
