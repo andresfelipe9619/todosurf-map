@@ -132,7 +132,18 @@ const loadGroupedLayerControl = () => {
 
 const loadLayerBaesedOnZoom = () => {
   let queryLocation = getLocation();
-  var bounds = [];
+  let bounds = [];
+  let minlat = 0,
+    minlon = 0,
+    maxlat = 0,
+    maxlon = 0;
+  const setCorners = ({ _northEast, _southWest }) => {
+    if (minlat > _southWest.lat || minlat === 0) minlat = _southWest.lat;
+    if (minlon > _southWest.lng || minlon === 0) minlon = _southWest.lng;
+    if (maxlat < _northEast.lat || maxlat === 0) maxlat = _northEast.lat;
+    if (maxlon < _northEast.lng || maxlon === 0) maxlon = _northEast.lng;
+  };
+
   if (queryLocation && queryLocation.location !== "all") {
     getLayersBaseOnZoom();
     console.log("My Layers based on zoom", layersBasedOnZoom);
@@ -141,6 +152,7 @@ const loadLayerBaesedOnZoom = () => {
       let layer = layersBasedOnZoom[i]["layer"];
       let layerBounds = layer.getBounds();
       console.log("layerBounds", layerBounds);
+      setCorners(layerBounds);
       bounds.push(layerBounds);
       mMap.addLayer(layer);
     }
@@ -151,16 +163,23 @@ const loadLayerBaesedOnZoom = () => {
         let layer = overlaysObj.priority[i][j];
         let layerBounds = layer.getBounds();
         console.log("layerBounds", layerBounds);
+        setCorners(layerBounds);
         bounds.push(layerBounds);
         mMap.addLayer(layer);
       }
     }
   }
+  const boundForExtraSpace = new L.LatLngBounds(
+    new L.LatLng(minlat - 5, minlon - 5),
+    new L.LatLng(maxlat + 5, maxlon + 5)
+  );
+
+  bounds.push(boundForExtraSpace);
   console.log("bounds", bounds);
   if (bounds.length) {
     mMap.fitBounds(bounds);
     mMap.setMaxBounds(bounds);
-    setTimeout(() => mMap.setZoom(mMap.getZoom() - 1), 500);
+    // setTimeout(() => mMap.setZoom(mMap.getZoom() - 1), 500);
   }
 };
 
