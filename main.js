@@ -14,9 +14,9 @@ const MAX_ZOOM_MARKERS = MAX_ZOOM_MAP - 4;
 const MAP_OPTIONS = {
   zoom: INITIAL_ZOOM,
   center: BOUNDS.getCenter(),
-  minZoom: INITIAL_ZOOM,
+  minZoom: INITIAL_ZOOM - 1,
   maxZoom: MAX_ZOOM_MAP,
-  // maxBounds: BOUNDS,
+  preferCanvas: true,
   maxBoundsViscosity: VISCOSITY
 };
 //VARIABLES
@@ -172,8 +172,8 @@ const loadLayerBaesedOnZoom = () => {
   }
   if (minlat !== 0 && minlon !== 0) {
     const boundForExtraSpace = new L.LatLngBounds(
-      new L.LatLng(minlat - 5, minlon - 5),
-      new L.LatLng(maxlat + 5, maxlon + 5)
+      new L.LatLng(minlat - 10, minlon - 10),
+      new L.LatLng(maxlat + 10, maxlon + 10)
     );
     bounds.push(boundForExtraSpace);
   }
@@ -182,7 +182,8 @@ const loadLayerBaesedOnZoom = () => {
   if (bounds.length) {
     mMap.fitBounds(bounds);
     mMap.setMaxBounds(bounds);
-    // setTimeout(() => mMap.setZoom(mMap.getZoom() - 1), 500);
+  } else {
+    setTimeout(() => mMap.setZoom(mMap.getZoom() - 1), 500);
   }
 };
 
