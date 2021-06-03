@@ -1,16 +1,16 @@
 // ************************ APP STATE ******************
 //CONSTANTS
 const TILE_LAYER =
-  "https://stamen-tiles-{s}.a.ssl.fastly.net/watercolor/{z}/{x}/{y}.{ext}";
+  'https://stamen-tiles-{s}.a.ssl.fastly.net/watercolor/{z}/{x}/{y}.{ext}'
 
 const BOUNDS = new L.LatLngBounds(
   new L.LatLng(-25.35452, -80.242609),
   new L.LatLng(70.836104, 25.921826)
-);
-const VISCOSITY = 0.1;
-const MAX_ZOOM_MAP = 14;
-const INITIAL_ZOOM = 4;
-const MAX_ZOOM_MARKERS = MAX_ZOOM_MAP - 4;
+)
+const VISCOSITY = 0.1
+const MAX_ZOOM_MAP = 14
+const INITIAL_ZOOM = 4
+const MAX_ZOOM_MARKERS = MAX_ZOOM_MAP - 4
 const MAP_OPTIONS = {
   zoom: INITIAL_ZOOM,
   center: BOUNDS.getCenter(),
@@ -18,155 +18,206 @@ const MAP_OPTIONS = {
   maxZoom: MAX_ZOOM_MAP,
   preferCanvas: true,
   maxBoundsViscosity: VISCOSITY
-};
+}
 //VARIABLES
-let mMap = null;
+let mMap = null
 let categories = {
   visible: [],
   priorities: {}
-};
-let overlaysObj = {};
-let layersBasedOnZoom = {};
-let baseLayer = null;
-let autoCompleteData = [];
+}
+let overlaysObj = {}
+let layersBasedOnZoom = {}
+let baseLayer = null
+let autoCompleteData = []
 // ************************ END APP STATE ******************
 
 // ************************ MAIN ******************
 $(document).ready(() => {
-  let urlParams = new URLSearchParams(window.location.search);
-  let country = urlParams.get("country");
-  let location = urlParams.get("location");
-  setLocation({ country, location });
-});
+  let urlParams = new URLSearchParams(window.location.search)
+  let country = urlParams.get('country')
+  let location = urlParams.get('location')
+  let zoom = urlParams.get('zoom')
+  let center = urlParams.get('center')
+  let bounds = urlParams.get('bounds')
+  setLocation({ country, location, zoom, center, bounds })
+})
 // ************************ END MAIN ******************
 
 // ************************ COMMAND FUNCTIONS ******************
 const loadMap = options => {
-  if (mMap) mMap = null;
-  mMap = L.map("mapid", { ...MAP_OPTIONS, ...options });
+  if (mMap) mMap = null
+  mMap = L.map('mapid', { ...MAP_OPTIONS, ...options })
+
+  // now generate some random data
+  var points = []
+  var max = 0
+  var width = 55
+  var height = 35
+  var len = 20
+
+  while (len--) {
+    var val = Math.floor(Math.random() * 20)
+    // now also with custom radius
+    var radius = Math.floor(Math.random() * 5)
+
+    max = Math.max(max, val)
+    var point = {
+      x: Math.floor(Math.random() * width),
+      y: Math.floor(Math.random() * height),
+      value: 1,
+      // radius configuration on point basis
+      radius: radius
+    }
+    points.push(point)
+  }
+  // heatmap data format
+  var data = {
+    max: max,
+    data: points
+  }
+  var cfg = {
+    // radius should be small ONLY if scaleRadius is true (or small radius is intended)
+    // if scaleRadius is false it will be the constant radius used in pixels
+    radius: 10,
+    maxOpacity: 0.8,
+    // scales the radius based on map zoom
+    scaleRadius: true,
+    // if set to false the heatmap uses the global maximum for colorization
+    // if activated: uses the data maximum within the current map boundaries
+    //   (there will always be a red spot with useLocalExtremas true)
+    useLocalExtrema: true,
+    // which field name in your data represents the latitude - default "lat"
+    latField: 'x',
+    // which field name in your data represents the longitude - default "lng"
+    lngField: 'y',
+    // which field name in your data represents the data value - default "value"
+    valueField: 'value'
+  }
+
+  var heatmapLayer = new HeatmapOverlay(cfg)
+
+  heatmapLayer.setData(data)
   baseLayer = L.tileLayer(TILE_LAYER, {
     attribution:
       'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    subdomains: "abcd",
-    ext: "jpg"
-  });
-
-  baseLayer.addTo(mMap);
-  loadSurfingFeatures();
-};
+    subdomains: 'abcd',
+    ext: 'jpg'
+  })
+  heatmapLayer.addTo(mMap)
+  baseLayer.addTo(mMap)
+  loadSurfingFeatures()
+}
 const loadSurfingFeatures = async () => {
   try {
-    let location = getLocation();
-    let result = await fetch(location.url);
-    let data = await result.json();
+    let location = getLocation()
+    let result = await fetch(location.url)
+    let data = await result.json()
     new L.GeoJSON(data, {
       pointToLayer,
       onEachFeature: handleOnEachFeature
-    });
+    })
 
-    loadGroupedLayers();
+    loadGroupedLayers()
   } catch (e) {
-    console.log("ERROR", e);
+    console.log('ERROR', e)
   }
-};
+}
 
 const loadGroupedLayers = () => {
-  let categoryName;
-  let zoomLevelsPerCategory = 1;
+  let categoryName
+  let zoomLevelsPerCategory = 1
 
-  overlaysObj.priority = {};
-  overlaysObj.visible = L.layerGroup(categories.visible);
-  mMap.addLayer(overlaysObj.visible);
-  overlaysObj.visible.eachLayer(marker => marker.openPopup());
+  overlaysObj.priority = {}
+  overlaysObj.visible = L.layerGroup(categories.visible)
+  mMap.addLayer(overlaysObj.visible)
+  overlaysObj.visible.eachLayer(marker => marker.openPopup())
 
   for (categoryName in categories.priorities) {
-    let category = categories.priorities[categoryName];
-    let categoryLength = category.length;
+    let category = categories.priorities[categoryName]
+    let categoryLength = category.length
     //Get the number of fetures a zoom level can show from the current category
-    let featuresPerZoomLevel = Math.ceil(
-      categoryLength / zoomLevelsPerCategory
-    );
-    let splitedArray = splitBy(featuresPerZoomLevel, category);
+    let featuresPerZoomLevel = Math.ceil(categoryLength / zoomLevelsPerCategory)
+    let splitedArray = splitBy(featuresPerZoomLevel, category)
     console.log(
       `[CAT-NAME=${categoryName}] ZOOM LVLS X CATEGORY=${zoomLevelsPerCategory} & FEATURES X ZOOM LVL=${featuresPerZoomLevel}`
-    );
-    let features = Object.assign({}, splitedArray);
+    )
+    let features = Object.assign({}, splitedArray)
 
-    overlaysObj.priority[categoryName] = {};
+    overlaysObj.priority[categoryName] = {}
 
     //iterate over the group of features of a category
     for (let i in features) {
-      let categoryLayerGroup, categoryArray;
-      categoryArray = features[i];
-      categoryLayerGroup = L.featureGroup(categoryArray);
-      categoryLayerGroup.categoryName = `${categoryName}-${i}`;
+      let categoryLayerGroup, categoryArray
+      categoryArray = features[i]
+      categoryLayerGroup = L.featureGroup(categoryArray)
+      categoryLayerGroup.categoryName = `${categoryName}-${i}`
       overlaysObj.priority[categoryName][
         `${categoryName}-${i}`
-      ] = categoryLayerGroup;
+      ] = categoryLayerGroup
     }
   }
 
   //I will comment it, but it wiil help later with some debugging
   // loadGroupedLayerControl();
-  loadLayerBaesedOnZoom();
-};
+  loadLayerBaesedOnZoom()
+}
 
 //Initialize grouped layers control
 const loadGroupedLayerControl = () => {
-  let priority = {};
-  let visible = overlaysObj.visible;
+  let priority = {}
+  let visible = overlaysObj.visible
   for (let i in overlaysObj.priority) {
     for (let j in overlaysObj.priority[i]) {
-      priority[j] = overlaysObj.priority[i][j];
+      priority[j] = overlaysObj.priority[i][j]
     }
   }
   let groupedOverlays = {
-    Visible: { "1": visible },
+    Visible: { '1': visible },
     Prioridades: priority
-  };
+  }
   let mapabase = {
-    "Capa base": baseLayer
-  };
-  L.control.groupedLayers(mapabase, groupedOverlays).addTo(mMap);
-};
+    'Capa base': baseLayer
+  }
+  L.control.groupedLayers(mapabase, groupedOverlays).addTo(mMap)
+}
 
 const loadLayerBaesedOnZoom = () => {
-  let queryLocation = getLocation();
-  let bounds = [];
+  let queryLocation = getLocation()
+  let bounds = []
   let minlat = 0,
     minlon = 0,
     maxlat = 0,
-    maxlon = 0;
+    maxlon = 0
   const setCorners = ({ _northEast, _southWest }) => {
-    if (!_northEast || !_southWest) return;
-    if (minlat > _southWest.lat || minlat === 0) minlat = _southWest.lat;
-    if (minlon > _southWest.lng || minlon === 0) minlon = _southWest.lng;
-    if (maxlat < _northEast.lat || maxlat === 0) maxlat = _northEast.lat;
-    if (maxlon < _northEast.lng || maxlon === 0) maxlon = _northEast.lng;
-  };
+    if (!_northEast || !_southWest) return
+    if (minlat > _southWest.lat || minlat === 0) minlat = _southWest.lat
+    if (minlon > _southWest.lng || minlon === 0) minlon = _southWest.lng
+    if (maxlat < _northEast.lat || maxlat === 0) maxlat = _northEast.lat
+    if (maxlon < _northEast.lng || maxlon === 0) maxlon = _northEast.lng
+  }
 
-  if (queryLocation && queryLocation.location !== "all") {
-    getLayersBaseOnZoom();
-    console.log("My Layers based on zoom", layersBasedOnZoom);
+  if (queryLocation && queryLocation.location !== 'all') {
+    getLayersBaseOnZoom()
+    console.log('My Layers based on zoom', layersBasedOnZoom)
 
     for (let i in layersBasedOnZoom) {
-      let layer = layersBasedOnZoom[i]["layer"];
-      let layerBounds = layer.getBounds();
-      console.log("layerBounds", layerBounds);
-      setCorners(layerBounds);
-      bounds.push(layerBounds);
-      mMap.addLayer(layer);
+      let layer = layersBasedOnZoom[i]['layer']
+      let layerBounds = layer.getBounds()
+      console.log('layerBounds', layerBounds)
+      setCorners(layerBounds)
+      bounds.push(layerBounds)
+      mMap.addLayer(layer)
     }
   } else {
-    console.log("My Overlays", overlaysObj);
+    console.log('My Overlays', overlaysObj)
     for (let i in overlaysObj.priority) {
       for (let j in overlaysObj.priority[i]) {
-        let layer = overlaysObj.priority[i][j];
-        let layerBounds = layer.getBounds();
-        console.log("layerBounds", layerBounds);
-        setCorners(layerBounds);
-        bounds.push(layerBounds);
-        mMap.addLayer(layer);
+        let layer = overlaysObj.priority[i][j]
+        let layerBounds = layer.getBounds()
+        console.log('layerBounds', layerBounds)
+        setCorners(layerBounds)
+        bounds.push(layerBounds)
+        mMap.addLayer(layer)
       }
     }
   }
@@ -174,107 +225,108 @@ const loadLayerBaesedOnZoom = () => {
     const boundForExtraSpace = new L.LatLngBounds(
       new L.LatLng(minlat - 10, minlon - 10),
       new L.LatLng(maxlat + 10, maxlon + 10)
-    );
-    bounds.push(boundForExtraSpace);
+    )
+    bounds.push(boundForExtraSpace)
   }
-  console.log("bounds", bounds);
+  console.log('bounds', bounds)
 
   if (bounds.length) {
-    mMap.fitBounds(bounds);
-    mMap.setMaxBounds(bounds);
+    mMap.fitBounds(bounds)
+    mMap.setMaxBounds(bounds)
   } else {
-    setTimeout(() => mMap.setZoom(mMap.getZoom() - 1), 500);
+    setTimeout(() => mMap.setZoom(mMap.getZoom() - 1), 500)
   }
-};
+}
 
 // ************************ END COMMAND FUNCTIONS ******************
 
 // ************************ EVENT HANDLERS ******************
 
 const handleOnEachFeature = (feature, layer) => {
-  let { prioridad, visible } = feature.properties;
+  let { prioridad, visible } = feature.properties
   if (visible && visible === 1) {
-    categories.visible.push(layer);
+    categories.visible.push(layer)
   } else {
-    if (typeof categories.priorities[prioridad] === "undefined") {
-      categories.priorities[prioridad] = [];
+    if (typeof categories.priorities[prioridad] === 'undefined') {
+      categories.priorities[prioridad] = []
     }
-    categories.priorities[prioridad].push(layer);
+    categories.priorities[prioridad].push(layer)
   }
-};
+}
 
 // ************************ END EVENT HANDLERS ******************
 
 const getLayersBaseOnZoom = () => {
-  let zoomCount = MAX_ZOOM_MARKERS;
+  let zoomCount = MAX_ZOOM_MARKERS
   for (let i in overlaysObj.priority) {
     for (let j in overlaysObj.priority[i]) {
-      console.log(`Zoom lvl=${zoomCount} HAS subcategory=${i}-${j}`);
-      let layer = overlaysObj.priority[i][j];
-      layersBasedOnZoom[zoomCount] = {};
-      layersBasedOnZoom[zoomCount]["layer"] = layer;
-      if (INITIAL_ZOOM <= zoomCount) zoomCount--;
+      console.log(`Zoom lvl=${zoomCount} HAS subcategory=${i}-${j}`)
+      let layer = overlaysObj.priority[i][j]
+      layersBasedOnZoom[zoomCount] = {}
+      layersBasedOnZoom[zoomCount]['layer'] = layer
+      if (INITIAL_ZOOM <= zoomCount) zoomCount--
     }
   }
-};
+}
 
 const pointToLayer = (feature, latlng) => {
-  let text = getPopupHtmlContent(feature);
-  let mIcon, marker, popup;
-  let { visible, enlace } = feature.properties;
+  let text = getPopupHtmlContent(feature)
+  let mIcon, marker, popup
+  let { visible, enlace } = feature.properties
   let iconOptions = {
     iconSize: [60, 70],
     shadowSize: [50, 50],
     iconAnchor: [22, 70],
     shadowAnchor: [4, 50],
     popupAnchor: [4, -60],
-    iconUrl: "marker.png"
-  };
+    iconUrl: 'marker.png'
+  }
   let popupOptions = {
     closeButton: false,
-    className: "custom",
+    className: 'custom',
     autoClose: true
-  };
+  }
 
-  mIcon = L.icon(iconOptions);
+  mIcon = L.icon(iconOptions)
   marker = L.marker(latlng, {
     icon: mIcon
-  });
+  })
 
   if (!isMobileDevice()) {
-    marker.on("mouseover", () => {
+    marker.on('mouseover', () => {
       for (let data of autoCompleteData) {
-        data.marker.closePopup();
+        data.marker.closePopup()
       }
-      marker.openPopup();
-    });
-    marker.on("click", () => {
-      window.open(enlace, "_self");
-    });
+      marker.openPopup()
+    })
+    marker.on('click', () => {
+      window.open(enlace, '_self')
+    })
   }
-  popup = visible
-    ? marker.bindPopup(text, { ...popupOptions, autoClose: false })
-    : marker.bindPopup(text, popupOptions);
+  popup = marker.bindPopup(
+    text,
+    visible ? { ...popupOptions, autoClose: false } : popupOptions
+  )
   autoCompleteData.push({
     id: feature.id,
     text: feature.properties.nombre_busqueda,
     marker: marker
-  });
-  return popup;
-};
+  })
+  return popup
+}
 
 //Just split and Array in N parts
 const splitBy = (n, a) =>
   a.reduce((acc, curr, i, self) => {
     if (!(i % n)) {
-      return [...acc, self.slice(i, i + n)];
+      return [...acc, self.slice(i, i + n)]
     }
-    return acc;
-  }, []);
+    return acc
+  }, [])
 
 const isMobileDevice = () =>
-  typeof window.orientation !== "undefined" ||
-  navigator.userAgent.indexOf("IEMobile") !== -1;
+  typeof window.orientation !== 'undefined' ||
+  navigator.userAgent.indexOf('IEMobile') !== -1
 
 const getPopupHtmlContent = ({ properties: { altura, enlace, nombre } }) =>
   `
@@ -286,4 +338,4 @@ const getPopupHtmlContent = ({ properties: { altura, enlace, nombre } }) =>
       href="${enlace}" >
         ${nombre} 
       </a>
-    </div>`;
+    </div>`
