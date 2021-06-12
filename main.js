@@ -25,6 +25,16 @@ const MAP_OPTIONS = {
   preferCanvas: true,
   maxBoundsViscosity: VISCOSITY
 }
+const VELOCITY_CONFIG = {
+  displayValues: true,
+  displayOptions: {
+    velocityType: 'GBR Wind',
+    position: 'bottomleft',
+    emptyString: 'No wind data',
+    showCardinal: true
+  },
+  maxVelocity: 10
+}
 const HEATMAP_CONFIG = {
   maxOpacity: 0.4,
   scaleRadius: true,
@@ -47,45 +57,50 @@ let autoCompleteData = []
 
 // ************************ MAIN ******************
 $(document).ready(() => {
-  let zoom = urlParams.get('zoom')
-  let center = urlParams.get('center')
-  let bounds = urlParams.get('bounds')
-  setLocation({ zoom, center, bounds })
+  const options = {}
+  const zoom = urlParams.get('zoom')
+  const center = urlParams.get('center')
+
+  if (zoom) options.zoom = zoom
+  if (center) options.center = center
+
+  loadMap(options)
 })
 // ************************ END MAIN ******************
 
 // ************************ COMMAND FUNCTIONS ******************
-const loadMap = options => {
+const loadMap = (options = {}) => {
+  console.log(`options`, options)
+  const { center: coords = '', zoom } = options
   if (mMap) mMap = null
-  mMap = L.map('mapid', { ...MAP_OPTIONS, ...options })
+  let center = MAP_OPTIONS.center
+  const [lat, lon] = coords.trim().split(',')
+  const hasCoords = !!lat && !!lon
+  console.log(`{lat, lon}`, { lat, lon })
+  if (hasCoords) center = new L.LatLng(lat, lon)
+  mMap = L.map('mapid', { ...MAP_OPTIONS, zoom, center })
+  baseLayer = L.tileLayer(TILE_LAYER, TILE_LAYER_CONFIG)
 
+  const velocityLayer = L.velocityLayer({ ...VELOCITY_CONFIG, data: espana })
   const heatmapLayer = new HeatmapOverlay(HEATMAP_CONFIG)
-  const heatmapData = getHeatmapData(step)
-  console.log(`heatmapData`, heatmapData)
 
+  const heatmapData = getHeatmapData(step)
   heatmapLayer.setData({
     max: 100,
     data: heatmapData
   })
 
-  baseLayer = L.tileLayer(TILE_LAYER, TILE_LAYER_CONFIG)
-
-  const velocityLayer = L.velocityLayer({
-    displayValues: true,
-    displayOptions: {
-      velocityType: 'GBR Wind',
-      position: 'bottomleft',
-      emptyString: 'No wind data',
-      showCardinal: true
-    },
-    data: espana,
-    maxVelocity: 10
-  })
-
-  baseLayer.addTo(mMap)
-  heatmapLayer.addTo(mMap)
-  velocityLayer.addTo(mMap)
+  if (zoom && hasCoords) {
+    let mapBounds = mMap.getBounds()
+    let maxBounds = mapBounds.pad(0.1)
+    mMap.setMaxBounds(maxBounds)
+  }
+  addLayersToMap([baseLayer, heatmapLayer, velocityLayer])
   loadSurfingFeatures()
+}
+
+const addLayersToMap = (layers = []) => {
+  layers.forEach(layer => mMap.addLayer(layer))
 }
 
 const loadSurfingFeatures = async () => {
@@ -328,6 +343,8 @@ const getPopupHtmlContent = ({ properties: { altura, enlace, nombre } }) =>
         ${nombre} 
       </a>
     </div>`
+
+const getVelocityData = () => {}
 
 const getHeatmapData = step =>
   step.features.map(f => ({

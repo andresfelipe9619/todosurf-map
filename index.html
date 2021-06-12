@@ -60,10 +60,6 @@
       country: null
     };
 
-    const setLocation = ({ zoom = 12, center, bounds }) => {
-      let regionZoom = { zoom };
-      loadMap(regionZoom);
-    };
     const getLocation = () => {
       if (!locationQuery) return;
       let url = `${locationQuery.url}?country=España`;
