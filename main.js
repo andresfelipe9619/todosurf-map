@@ -1,8 +1,14 @@
 // ************************ APP STATE ******************
 //CONSTANTS
 const TILE_LAYER =
-  'https://stamen-tiles-{s}.a.ssl.fastly.net/watercolor/{z}/{x}/{y}.{ext}'
-
+  'http://{s}.sm.mapstack.stamen.com/' +
+  '(toner-lite,$fff[difference],$fff[@23],$fff[hsl-saturation@20])/' +
+  '{z}/{x}/{y}.png'
+const TILE_LAYER_CONFIG = {
+  attribution:
+    'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, ' +
+    'NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'
+}
 const BOUNDS = new L.LatLngBounds(
   new L.LatLng(-25.35452, -80.242609),
   new L.LatLng(70.836104, 25.921826)
@@ -19,6 +25,14 @@ const MAP_OPTIONS = {
   preferCanvas: true,
   maxBoundsViscosity: VISCOSITY
 }
+const HEATMAP_CONFIG = {
+  maxOpacity: 0.4,
+  scaleRadius: true,
+  useLocalExtrema: true,
+  latField: 'x',
+  lngField: 'y',
+  valueField: 'value'
+}
 //VARIABLES
 let mMap = null
 let categories = {
@@ -33,13 +47,10 @@ let autoCompleteData = []
 
 // ************************ MAIN ******************
 $(document).ready(() => {
-  let urlParams = new URLSearchParams(window.location.search)
-  let country = urlParams.get('country')
-  let location = urlParams.get('location')
   let zoom = urlParams.get('zoom')
   let center = urlParams.get('center')
   let bounds = urlParams.get('bounds')
-  setLocation({ country, location, zoom, center, bounds })
+  setLocation({ zoom, center, bounds })
 })
 // ************************ END MAIN ******************
 
@@ -48,79 +59,78 @@ const loadMap = options => {
   if (mMap) mMap = null
   mMap = L.map('mapid', { ...MAP_OPTIONS, ...options })
 
-  // now generate some random data
-  var points = []
-  var max = 0
-  var width = 55
-  var height = 35
-  var len = 20
+  const heatmapLayer = new HeatmapOverlay(HEATMAP_CONFIG)
+  const heatmapData = getHeatmapData(step)
+  console.log(`heatmapData`, heatmapData)
 
-  while (len--) {
-    var val = Math.floor(Math.random() * 20)
-    // now also with custom radius
-    var radius = Math.floor(Math.random() * 5)
-
-    max = Math.max(max, val)
-    var point = {
-      x: Math.floor(Math.random() * width),
-      y: Math.floor(Math.random() * height),
-      value: 1,
-      // radius configuration on point basis
-      radius: radius
-    }
-    points.push(point)
-  }
-  // heatmap data format
-  var data = {
-    max: max,
-    data: points
-  }
-  var cfg = {
-    // radius should be small ONLY if scaleRadius is true (or small radius is intended)
-    // if scaleRadius is false it will be the constant radius used in pixels
-    radius: 10,
-    maxOpacity: 0.8,
-    // scales the radius based on map zoom
-    scaleRadius: true,
-    // if set to false the heatmap uses the global maximum for colorization
-    // if activated: uses the data maximum within the current map boundaries
-    //   (there will always be a red spot with useLocalExtremas true)
-    useLocalExtrema: true,
-    // which field name in your data represents the latitude - default "lat"
-    latField: 'x',
-    // which field name in your data represents the longitude - default "lng"
-    lngField: 'y',
-    // which field name in your data represents the data value - default "value"
-    valueField: 'value'
-  }
-
-  var heatmapLayer = new HeatmapOverlay(cfg)
-
-  heatmapLayer.setData(data)
-  baseLayer = L.tileLayer(TILE_LAYER, {
-    attribution:
-      'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    subdomains: 'abcd',
-    ext: 'jpg'
+  heatmapLayer.setData({
+    max: 100,
+    data: heatmapData
   })
-  heatmapLayer.addTo(mMap)
+
+  baseLayer = L.tileLayer(TILE_LAYER, TILE_LAYER_CONFIG)
+
+  const velocityLayer = L.velocityLayer({
+    displayValues: true,
+    displayOptions: {
+      velocityType: 'GBR Wind',
+      position: 'bottomleft',
+      emptyString: 'No wind data',
+      showCardinal: true
+    },
+    data: espana,
+    maxVelocity: 10
+  })
+
   baseLayer.addTo(mMap)
+  heatmapLayer.addTo(mMap)
+  velocityLayer.addTo(mMap)
   loadSurfingFeatures()
 }
+
 const loadSurfingFeatures = async () => {
   try {
-    let location = getLocation()
-    let result = await fetch(location.url)
-    let data = await result.json()
+    const location = getLocation()
+    const result = await fetch(location.url, {
+      method: 'GET',
+      mode: 'no-cors',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    console.log(`result`, result)
+    const data = await result.json()
+    console.log(`data`, data)
     new L.GeoJSON(data, {
       pointToLayer,
       onEachFeature: handleOnEachFeature
     })
 
     loadGroupedLayers()
+    //I will comment it, but it wiil help later with some debugging
+    // loadGroupedLayerControl();
   } catch (e) {
     console.log('ERROR', e)
   }
+}
+
+//Initialize grouped layers control
+const loadGroupedLayerControl = () => {
+  let priority = {}
+  let visible = overlaysObj.visible
+  for (let i in overlaysObj.priority) {
+    for (let j in overlaysObj.priority[i]) {
+      priority[j] = overlaysObj.priority[i][j]
+    }
+  }
+  let groupedOverlays = {
+    Visible: { '1': visible },
+    Prioridades: priority
+  }
+  let mapabase = {
+    'Capa base': baseLayer
+  }
+  L.control.groupedLayers(mapabase, groupedOverlays).addTo(mMap)
 }
 
 const loadGroupedLayers = () => {
@@ -157,28 +167,7 @@ const loadGroupedLayers = () => {
     }
   }
 
-  //I will comment it, but it wiil help later with some debugging
-  // loadGroupedLayerControl();
-  loadLayerBaesedOnZoom()
-}
-
-//Initialize grouped layers control
-const loadGroupedLayerControl = () => {
-  let priority = {}
-  let visible = overlaysObj.visible
-  for (let i in overlaysObj.priority) {
-    for (let j in overlaysObj.priority[i]) {
-      priority[j] = overlaysObj.priority[i][j]
-    }
-  }
-  let groupedOverlays = {
-    Visible: { '1': visible },
-    Prioridades: priority
-  }
-  let mapabase = {
-    'Capa base': baseLayer
-  }
-  L.control.groupedLayers(mapabase, groupedOverlays).addTo(mMap)
+  // loadLayerBaesedOnZoom()
 }
 
 const loadLayerBaesedOnZoom = () => {
@@ -339,3 +328,11 @@ const getPopupHtmlContent = ({ properties: { altura, enlace, nombre } }) =>
         ${nombre} 
       </a>
     </div>`
+
+const getHeatmapData = step =>
+  step.features.map(f => ({
+    value: f?.properties?.wave_height,
+    radius: 0.4,
+    x: f?.geometry?.coordinates[1],
+    y: f?.geometry?.coordinates[0]
+  }))

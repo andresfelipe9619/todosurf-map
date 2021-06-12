@@ -11,12 +11,12 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.4/dist/leaflet.css"
       integrity="sha512-puBpdR0798OZvTTbP4A8Ix/l+A4dHDD0DGqYW6RQ+9jxkRFclaxxQb/SJAWZfWAkuyeQUytO7+7N4QKrDh+drA=="
       crossorigin="" />
-    <link rel="stylesheet" href="./lib/leaflet-groupedlayercontrol/dist/leaflet.groupedlayercontrol.min.css" />
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/css/select2.min.css" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/select2-bootstrap-theme/0.1.0-beta.10/select2-bootstrap.min.css"
       rel="stylesheet" />
-    <link rel="stylesheet" href="./styles.css" />
+    <link href="./lib/leaflet-velocity/dist/leaflet-velocity.css" rel="stylesheet" />
+    <link rel=" stylesheet" href="./styles.css" />
     <style>
       html,
       body {
@@ -43,36 +43,30 @@
   <script src="https://unpkg.com/leaflet@1.3.4/dist/leaflet.js"
     integrity="sha512-nMMmRyTVoLYqjP9hrbed9S+FzjZHW5gY1TWCHA5ckwXZBadntCNs8kEqAWdrb9O7rxbCaA4lKTIWjDXZxflOcA=="
     crossorigin=""></script>
-  <script src="./lib/leaflet-groupedlayercontrol/dist/leaflet.groupedlayercontrol.min.js"></script>
   <script src="https://unpkg.com/leaflet.vectorgrid@1.2.0"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/heatmap.js/2.0.0/heatmap.min.js"
     integrity="sha512-FpvmtV53P/z7yzv1TAIVH7PNz94EKXs5aV6ts/Zi+B/VeGU5Xwo6KIbwpTgKc0d4urD/BtkK50IC9785y68/AA=="
     crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="./lib/leaflet-heatmap/leaflet-heatmap.js"></script>
+  <script src="./lib/leaflet-velocity/dist/leaflet-velocity.js"></script>
+  <script src="./espana.js"></script>
+  <script src="./step0.js"></script>
 
   <script>
+    let urlParams = new URLSearchParams(window.location.search)
     let locationQuery = {
       url: "https://www.todosurf.com/dev/config/classes/mapaGJS.php",
       location: "all",
       country: null
     };
 
-    const setLocation = ({ country, location, zoom = 6, center, bounds }) => {
-      locationQuery.location = location || "all";
-      locationQuery.country = country || "España";
-      let regionZoom = location && isNotAll(location) && { zoom, minZoom: zoom, maxZoom: zoom };
+    const setLocation = ({ zoom = 12, center, bounds }) => {
+      let regionZoom = { zoom };
       loadMap(regionZoom);
     };
     const getLocation = () => {
       if (!locationQuery) return;
-      const { location, country } = locationQuery;
       let url = `${locationQuery.url}?country=España`;
-      const hasLocation = isNotEmpty(location) && isNotAll(location);
-      const hasCountry = isNotEmpty(country);
-      if (hasCountry) {
-        let locationString = isNotAll(country) ? `&location=${location}` : ""
-        url = `${locationQuery.url}?country=${country}${locationString}`;
-      }
       locationQuery.url = url;
       console.log("locationQuery", locationQuery);
       return locationQuery;
